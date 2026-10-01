@@ -74,6 +74,9 @@
             {{ form.as_p }}
             <button type="submit">Acessar Painel</button>
         </form>
+        <div style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-muted);">
+            Ainda não tem uma conta? <a href="{% url 'auto_registro' %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">Registe-se aqui</a>
+        </div>
     </div>
 </body>
 </html>

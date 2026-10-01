@@ -13,6 +13,7 @@ import csv
 from django.db.models import Sum, Count
 from core.models import Produto, HistoricoVenda
 from django.db.models.functions import ExtractWeekDay
+from .forms import ProdutoForm, CustomUserCreationForm
 
 
 
@@ -40,11 +41,29 @@ def fazer_logout(request):
     logout(request)
     return redirect('login')
 
+def auto_registro(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_staff = False  # Segurança: garante que contas públicas nunca nascem como admin
+            user.save()
+            messages.success(request, 'Conta criada com sucesso! Faça login para começar.')
+            return redirect('login')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = UserCreationForm()
+        
+    return render(request, 'core/auto_registro.html', {'form': form})
+
+
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='/')
 def cadastrar_usuario(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST) # <-- Alterado aqui
         if form.is_valid():
             user = form.save(commit=False)
             if request.POST.get('is_staff') == 'on':
@@ -56,9 +75,27 @@ def cadastrar_usuario(request):
             for error in form.errors.values():
                 messages.error(request, error)
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm() # <-- E aqui
         
     return render(request, 'core/cadastrar_usuario.html', {'form': form})
+
+
+def auto_registro(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_staff = False 
+            user.save()
+            messages.success(request, 'Conta criada com sucesso! Faça login para começar.')
+            return redirect('login')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = CustomUserCreationForm()
+        
+    return render(request, 'core/auto_registro.html', {'form': form})
 
 @login_required(login_url='login')
 def minha_home(request):
@@ -148,7 +185,6 @@ def realizar_venda(request, produto_id):
                     usuario=request.user
                 )
                 
-                # Debita do stock
                 produto.quantidade_estoque -= quantidade
                 produto.save()
                 
@@ -221,7 +257,6 @@ def relatorios(request):
     produto_mais_valioso = max(produtos, key=lambda p: (p.preco * p.quantidade_estoque)) if produtos.exists() else None
     produtos_baixo_estoque = produtos.filter(quantidade_estoque__gt=0).order_by('quantidade_estoque')[:3]
 
-    # Dados por Categoria para os Gráficos
     categorias_dados = {}
     for cat_nome, _ in Produto.CATEGORIAS_CHOICES:
         prods_cat = produtos.filter(categoria=cat_nome)
