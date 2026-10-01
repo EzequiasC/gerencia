@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Carrinho de Compras - Futuristic Stock</title>
+    <style>
+        :root {
+            --primary: #4977DF; --success: #22c55e; --danger: #ef4444; --bg-dark: #0f172a; --bg-card: #1e293b;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-dark); color: var(--text-main); padding: 30px; }
+        .container { max-width: 800px; margin: 0 auto; background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        h2 { margin-top: 0; color: var(--text-main); font-weight: 600; font-size: 24px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { color: var(--text-muted); font-weight: 600; }
+        .total-box { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; padding: 20px; background: rgba(73, 119, 223, 0.1); border-radius: 8px; border: 1px solid rgba(73, 119, 223, 0.3); font-size: 18px; font-weight: bold; }
+        .btn-container { display: flex; gap: 15px; margin-top: 30px; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; transition: 0.2s; display: inline-block; }
+        .btn-confirm { background: var(--success); color: white; flex: 1; }
+        .btn-confirm:hover { background: #16a34a; }
+        .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-back:hover { background: var(--bg-dark); color: var(--text-main); }
+        .btn-danger { background: var(--danger); color: white; padding: 6px 12px; font-size: 12px; }
+        .btn-danger:hover { background: #dc2626; }
+        .empty { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🛒 Carrinho de Compras</h2>
+        
+        {% if itens %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Preço Unit.</th>
+                        <th>Qtd</th>
+                        <th>Subtotal</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in itens %}
+                    <tr>
+                        <td><strong>{{ item.produto.name }}</strong></td>
+                        <td>R$ {{ item.produto.preco|floatformat:2 }}</td>
+                        <td>{{ item.quantidade }}</td>
+                        <td><strong>R$ {{ item.subtotal|floatformat:2 }}</strong></td>
+                        <td>
+                            <a href="{% url 'remover_do_carrinho' item.produto.id %}" class="btn btn-danger">Remover</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="total-box">
+                <span>Total Geral do Carrinho:</span>
+                <span style="color: var(--success);">R$ {{ valor_total_carrinho|floatformat:2 }}</span>
+            </div>
+
+            <div class="btn-container">
+                <a href="{% url 'minha_home' %}" class="btn btn-back">Continuar a Comprar</a>
+                <a href="{% url 'finalizar_venda_carrinho' %}" class="btn btn-confirm">Finalizar Venda</a>
+            </div>
+        {% else %}
+            <div class="empty">O seu carrinho está vazio.</div>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="{% url 'minha_home' %}" class="btn btn-back">Voltar ao Inventário</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

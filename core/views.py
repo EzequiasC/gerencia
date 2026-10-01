@@ -285,3 +285,108 @@ def exportar_csv(request):
         writer.writerow([p.name, p.categoria, p.preco_custo, p.preco, p.quantidade_estoque, p.lucro_unitario])
         
     return response
+
+@login_required(login_url='login')
+def adicionar_ao_carrinho(request, produto_id):
+    produto = get_object_or_404(Produto, id=produto_id)
+    quantidade = int(request.POST.get('quantidade', 1))
+    
+    if quantidade <= 0:
+        messages.error(request, 'A quantidade deve ser maior que zero.')
+        return redirect('minha_home')
+        
+    if quantidade > produto.quantidade_estoque:
+        messages.error(request, f'Stock insuficiente! Só existem {produto.quantidade_estoque} unidades.')
+        return redirect('minha_home')
+        
+    if 'cart' not in request.session:
+        request.session['cart'] = {}
+        
+    cart = request.session['cart']
+    str_id = str(produto_id)
+    
+    quantidade_atual = cart.get(str_id, 0)
+    nova_quantidade = quantidade_atual + quantidade
+    
+    if nova_quantidade > produto.quantidade_estoque:
+        messages.error(request, 'A quantidade total no carrinho excede o stock disponível.')
+        return redirect('minha_home')
+        
+    cart[str_id] = nova_quantidade
+    request.session.modified = True
+    
+    messages.success(request, f'"{produto.name}" adicionado ao carrinho!')
+    return redirect('minha_home')
+
+
+@login_required(login_url='login')
+def ver_carrinho(request):
+    cart = request.session.get('cart', {})
+    itens_carrinho = []
+    valor_total_carrinho = 0
+    
+    for produto_id, quantidade in cart.items():
+        produto = get_object_or_404(Produto, id=int(produto_id))
+        subtotal = produto.preco * quantidade
+        valor_total_carrinho += subtotal
+        
+        itens_carrinho.append({
+            'produto': produto,
+            'quantidade': quantidade,
+            'subtotal': subtotal
+        })
+        
+    contexto = {
+        'itens': itens_carrinho,
+        'valor_total_carrinho': valor_total_carrinho
+    }
+    return render(request, 'core/carrinho.html', contexto)
+
+
+@login_required(login_url='login')
+def remover_do_carrinho(request, produto_id):
+    cart = request.session.get('cart', {})
+    str_id = str(produto_id)
+    
+    if str_id in cart:
+        del cart[str_id]
+        request.session.modified = True
+        messages.success(request, 'Item removido do carrinho.')
+        
+    return redirect('ver_carrinho')
+
+
+@login_required(login_url='login')
+def finalizar_venda_carrinho(request):
+    cart = request.session.get('cart', {})
+    
+    if not cart:
+        messages.error(request, 'O seu carrinho está vazio.')
+        return redirect('ver_carrinho')
+        
+    for produto_id, quantidade in cart.items():
+        produto = get_object_or_404(Produto, id=int(produto_id))
+        
+        if quantidade > produto.quantidade_estoque:
+            messages.error(request, f'Stock insuficiente para "{produto.name}". Venda cancelada.')
+            return redirect('ver_carrinho')
+            
+        lucro_venda = produto.lucro_unitario * quantidade
+        
+        HistoricoVenda.objects.create(
+            produto=produto,
+            nome_produto=produto.name,
+            quantidade=quantidade,
+            preco_venda_unitario=produto.preco,
+            lucro_obtido=lucro_venda,
+            usuario=request.user
+        )
+        
+        produto.quantidade_estoque -= quantidade
+        produto.save()
+        
+    request.session['cart'] = {}
+    request.session.modified = True
+    
+    messages.success(request, '🎉 Venda consolidada com sucesso e stock atualizado!')
+    return redirect('minha_home')

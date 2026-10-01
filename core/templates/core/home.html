@@ -137,6 +137,7 @@
             {% if request.user.is_staff %}
                 <a href="{% url 'adicionar_produto' %}" class="btn btn-success">+ Novo Produto</a>
                 <a href="{% url 'cadastrar_usuario' %}" class="btn btn-outline">👥 Novo Utilizador</a>
+                <a href="{% url 'ver_carrinho' %}" class="btn btn-outline" style="background: var(--primary); color: white; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 14px;">🛒 Ver Carrinho</a>
             {% endif %}
         </div>
     </div>

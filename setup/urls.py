@@ -1,7 +1,7 @@
 from django.urls import path
 from core.views import (
     landing_page, minha_home, adicionar_produto, 
-    editar_produto, realizar_venda, relatorios, fazer_login, fazer_logout,cadastrar_usuario,exportar_csv,historico_vendas,auto_registro
+    editar_produto, realizar_venda, relatorios, fazer_login, fazer_logout,cadastrar_usuario,exportar_csv,historico_vendas,auto_registro, adicionar_ao_carrinho, ver_carrinho, remover_do_carrinho, finalizar_venda_carrinho
 )
 
 urlpatterns = [
@@ -17,4 +17,8 @@ urlpatterns = [
     path('usuarios/novo/', cadastrar_usuario, name='cadastrar_usuario'),
     path('relatorios/exportar/', exportar_csv, name='exportar_csv'),
     path('historico/', historico_vendas, name='historico_vendas'),
+    path('carrinho/', ver_carrinho, name='ver_carrinho'),
+    path('carrinho/adicionar/<int:produto_id>/', adicionar_ao_carrinho, name='adicionar_ao_carrinho'),
+    path('carrinho/remover/<int:produto_id>/', remover_do_carrinho, name='remover_do_carrinho'),
+    path('carrinho/finalizar/', finalizar_venda_carrinho, name='finalizar_venda_carrinho'),
 ]
