@@ -1,24 +1,20 @@
+import csv
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib import messages
 from django.core.paginator import Paginator
-from core.models import Produto
-from core.forms import ProdutoForm
 from django.http import HttpResponse
-import csv
 from django.db.models import Sum, Count
-from core.models import Produto, HistoricoVenda
 from django.db.models.functions import ExtractWeekDay
-from .forms import ProdutoForm, CustomUserCreationForm
-
+from core.models import Produto, HistoricoVenda
+from core.forms import ProdutoForm, CustomUserCreationForm
 
 
 def landing_page(request):
     return render(request, 'core/landing.html')
+
 
 def is_admin(user):
     return user.is_staff
@@ -29,24 +25,26 @@ def fazer_login(request):
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
+            auth_login(request, user)
             return redirect('minha_home')
         else:
-            messages.error(request, 'Utilizador ou senha inválidos.')
+            messages.error(request, 'Utilizador ou palavra-passe inválidos.')
     else:
         form = AuthenticationForm()
     return render(request, 'core/login.html', {'form': form})
 
+
 def fazer_logout(request):
-    logout(request)
+    auth_logout(request)
     return redirect('login')
+
 
 def auto_registro(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.is_staff = False  # Segurança: garante que contas públicas nunca nascem como admin
+            user.is_staff = False  # Segurança: contas públicas nunca nascem como admin
             user.save()
             messages.success(request, 'Conta criada com sucesso! Faça login para começar.')
             return redirect('login')
@@ -54,7 +52,7 @@ def auto_registro(request):
             for error in form.errors.values():
                 messages.error(request, error)
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
         
     return render(request, 'core/auto_registro.html', {'form': form})
 
@@ -63,7 +61,7 @@ def auto_registro(request):
 @user_passes_test(is_admin, login_url='/')
 def cadastrar_usuario(request):
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST) # <-- Alterado aqui
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
             if request.POST.get('is_staff') == 'on':
@@ -75,27 +73,10 @@ def cadastrar_usuario(request):
             for error in form.errors.values():
                 messages.error(request, error)
     else:
-        form = CustomUserCreationForm() # <-- E aqui
+        form = CustomUserCreationForm()
         
     return render(request, 'core/cadastrar_usuario.html', {'form': form})
 
-
-def auto_registro(request):
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.is_staff = False 
-            user.save()
-            messages.success(request, 'Conta criada com sucesso! Faça login para começar.')
-            return redirect('login')
-        else:
-            for error in form.errors.values():
-                messages.error(request, error)
-    else:
-        form = CustomUserCreationForm()
-        
-    return render(request, 'core/auto_registro.html', {'form': form})
 
 @login_required(login_url='login')
 def minha_home(request):
@@ -110,16 +91,24 @@ def minha_home(request):
     lucro_total_geral = 0
     
     for p in produtos_lista:
-        valor_total_geral += (p.preco * p.quantidade_estoque)
-        lucro_total_geral += (p.lucro_unitario * p.quantidade_estoque)
+        preco = p.preco or 0
+        custo = p.preco_custo or 0
+        qtd = p.quantidade_estoque or 0
+        lucro_unit = preco - custo
+        
+        valor_total_geral += (preco * qtd)
+        lucro_total_geral += (lucro_unit * qtd)
 
     paginator = Paginator(produtos_lista, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     for p in page_obj:
-        p.valor_total = p.preco * p.quantidade_estoque
-        p.lucro_total_item = p.lucro_unitario * p.quantidade_estoque
+        preco = p.preco or 0
+        custo = p.preco_custo or 0
+        qtd = p.quantidade_estoque or 0
+        p.valor_total = preco * qtd
+        p.lucro_total_item = (preco - custo) * qtd
 
     contexto = {
         'produtos': page_obj, 
@@ -128,6 +117,7 @@ def minha_home(request):
         'termo_busca': termo_busca
     }
     return render(request, 'core/home.html', contexto)
+
 
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='/')
@@ -143,6 +133,7 @@ def adicionar_produto(request):
     
     contexto = {'form': form}
     return render(request, 'core/adicionar_produto.html', contexto)
+
 
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='/')
@@ -161,6 +152,7 @@ def editar_produto(request, produto_id):
     contexto = {'form': form, 'produto': produto}
     return render(request, 'core/editar_produto.html', contexto)
 
+
 @login_required(login_url='login')
 def realizar_venda(request, produto_id):
     produto = get_object_or_404(Produto, id=produto_id)
@@ -172,7 +164,7 @@ def realizar_venda(request, produto_id):
             if quantidade <= 0:
                 messages.error(request, 'A quantidade de venda deve ser maior que zero.')
             elif quantidade > produto.quantidade_estoque:
-                messages.error(request, f'Estoque insuficiente! Só possui {produto.quantidade_estoque} un.')
+                messages.error(request, f'Stock insuficiente! Só possui {produto.quantidade_estoque} un.')
             else:
                 lucro_venda = produto.lucro_unitario * quantidade
                 
@@ -195,6 +187,7 @@ def realizar_venda(request, produto_id):
             messages.error(request, 'Por favor, digite um número válido.')
             
     return render(request, 'core/realizar_venda.html', {'produto': produto})
+
 
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='/')
@@ -238,6 +231,7 @@ def historico_vendas(request):
     }
     return render(request, 'core/historico_vendas.html', contexto)
 
+
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='/')
 def relatorios(request):
@@ -247,12 +241,10 @@ def relatorios(request):
     total_itens_estoque = produtos.aggregate(Sum('quantidade_estoque'))['quantidade_estoque__sum'] or 0
     produtos_esgotados = produtos.filter(quantidade_estoque=0).count()
     
-    # Totais financeiros
     valor_total_investido = sum(p.preco_custo * p.quantidade_estoque for p in produtos)
     valor_total_venda = sum(p.preco * p.quantidade_estoque for p in produtos)
     lucro_total_projetado = sum((p.preco - p.preco_custo) * p.quantidade_estoque for p in produtos)
     
-    # Destaques
     produto_maior_margem = max(produtos, key=lambda p: p.lucro_unitario) if produtos.exists() else None
     produto_mais_valioso = max(produtos, key=lambda p: (p.preco * p.quantidade_estoque)) if produtos.exists() else None
     produtos_baixo_estoque = produtos.filter(quantidade_estoque__gt=0).order_by('quantidade_estoque')[:3]
@@ -278,6 +270,7 @@ def relatorios(request):
         'categorias_valores': list(categorias_dados.values()),
     }
     return render(request, 'core/relatorios.html', contexto)
+
 
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='/')
