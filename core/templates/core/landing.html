@@ -1,0 +1,327 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futuristic Stock - Próxima Geração</title>
+    <style>
+        :root {
+            --c1: #0009A4;
+            --c2: #492D73;
+            --c3: #271DC7;
+            --c4: #81D462;
+            --c5: #4977DF;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #050510, var(--c2), #000000);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Canvas das Partículas no fundo */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Classe de Efeito Vidro Fosco (Glassmorphism) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            border-bottom: 1px solid rgba(129, 212, 98, 0.2);
+        }
+
+        .logo {
+            font-size: 26px;
+            font-weight: bold;
+            color: var(--c4);
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(129, 212, 98, 0.5);
+        }
+
+        .btn-entrar {
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+            background: transparent;
+            color: #ffffff;
+            border: 2px solid var(--c5);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(73, 119, 223, 0.3);
+        }
+
+        .btn-entrar:hover {
+            background: var(--c5);
+            box-shadow: 0 0 25px var(--c5);
+            transform: translateY(-3px);
+        }
+
+        .main-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 50px;
+            flex: 1;
+            flex-wrap: wrap;
+            gap: 40px;
+            z-index: 1;
+        }
+
+        .text-section {
+            max-width: 500px;
+            padding: 40px;
+            border-radius: 20px;
+            transition: transform 0.1s;
+        }
+
+        .text-section h1 {
+            font-size: 52px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            line-height: 1.1;
+            background: linear-gradient(90deg, #ffffff, var(--c4));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .text-section p {
+            font-size: 18px;
+            color: #d1d5db;
+            line-height: 1.6;
+            margin-bottom: 35px;
+        }
+
+        /* O Segredo do Parallax + Lata Girando */
+        .parallax-wrapper {
+            perspective: 1000px; /* Dá a noção de profundidade 3D pro mouse */
+        }
+
+        .image-section {
+            text-align: center;
+            position: relative;
+            /* Transição suave pro movimento do mouse */
+            transition: transform 0.1s ease-out; 
+        }
+
+        .image-section img {
+            width: 320px;
+            height: auto;
+            filter: drop-shadow(0px 20px 30px rgba(73, 119, 223, 0.6));
+            /* A lata gira no próprio eixo infinitamente */
+            animation: girarLata 7s infinite linear;
+        }
+
+        @keyframes girarLata {
+            0% { transform: rotateY(0deg) translateY(0px); }
+            25% { transform: rotateY(90deg) translateY(-10px); }
+            50% { transform: rotateY(180deg) translateY(0px); }
+            75% { transform: rotateY(270deg) translateY(10px); }
+            100% { transform: rotateY(360deg) translateY(0px); }
+        }
+
+        .shadow-floor {
+            width: 220px;
+            height: 20px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 50%;
+            margin: 20px auto 0 auto;
+            filter: blur(8px);
+            animation: pulseShadow 7s infinite linear;
+        }
+
+        @keyframes pulseShadow {
+            0%, 50%, 100% { transform: scale(1); opacity: 0.8; }
+            25%, 75% { transform: scale(0.8); opacity: 0.4; }
+        }
+
+        /* Seção de Features (Cards) */
+        .features-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 40px 50px;
+            flex-wrap: wrap;
+            z-index: 1;
+        }
+
+        .feature-card {
+            flex: 1;
+            min-width: 250px;
+            max-width: 300px;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--c4);
+            box-shadow: 0 15px 30px rgba(129, 212, 98, 0.2);
+        }
+
+        .feature-card .icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 15px var(--c5);
+        }
+
+        .feature-card h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+
+        .feature-card p {
+            margin: 0;
+            color: #a1a1aa;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Fundo de Partículas -->
+    <canvas id="particles-canvas"></canvas>
+
+    <header class="glass-panel">
+        <div class="logo">⚡ FUTURISTIC STOCK</div>
+        <a href="{% url 'login' %}" class="btn-entrar">🚪 Entrar no Sistema</a>
+    </header>
+
+    <div class="main-container">
+        <!-- Textos em Painel Glassmorphism -->
+        <div class="text-section glass-panel" id="text-parallax">
+            <h1>Controle Absoluto de Estoque</h1>
+            <p>Um sistema inteligente projetado para o seu negócio. Calcule lucros em tempo real, gerencie vendas com baixa automática e tome decisões com base em dados de alta precisão.</p>
+            <a href="{% url 'login' %}" class="btn-entrar" style="background: var(--c4); color: #0009A4; border: none; font-size: 18px; padding: 15px 30px; display: inline-block;">Acessar Meu Painel 🚀</a>
+        </div>
+
+        <!-- A Lata Gigante com Parallax do Mouse -->
+        <div class="parallax-wrapper">
+            <div class="image-section" id="can-parallax">
+                <img src="{% static 'core/5198836.png' %}" alt="Lata 3D Giratória">
+                <div class="shadow-floor"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Funcionalidades -->
+    <div class="features-container">
+        <div class="feature-card glass-panel">
+            <div class="icon">🛒</div>
+            <h3>Baixa em Tempo Real</h3>
+            <p>Registre vendas com 1 clique. O estoque é atualizado instantaneamente no banco de dados.</p>
+        </div>
+        <div class="feature-card glass-panel">
+            <div class="icon">📈</div>
+            <h3>Margem de Lucro</h3>
+            <p>Controle o preço de custo e venda. Saiba exatamente qual será o seu lucro projetado.</p>
+        </div>
+        <div class="feature-card glass-panel">
+            <div class="icon">🔒</div>
+            <h3>Segurança Total</h3>
+            <p>Sistema protegido por autenticação. Somente pessoal autorizado tem acesso aos dados sensíveis.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("mousemove", function(e) {
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+            
+            // Movimenta a lata
+            const can = document.getElementById("can-parallax");
+            can.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+
+            // Movimenta o painel de texto de forma mais sutil
+            const text = document.getElementById("text-parallax");
+            text.style.transform = `translate(${xAxis / 2}px, ${yAxis / 2}px)`;
+        });
+
+        const canvas = document.getElementById("particles-canvas");
+        const ctx = canvas.getContext("2d");
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particlesArray = [];
+        const numberOfParticles = 80;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.y < 0) this.y = canvas.height;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(129, 212, 98, 0.5)'; // Cor verde da sua paleta
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            particlesArray = [];
+            for (let i = 0; i < numberOfParticles; i++) {
+                particlesArray.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        init();
+        animate();
+
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            init();
+        });
+    </script>
+</body>
+</html>

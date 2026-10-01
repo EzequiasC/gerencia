@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Novo Utilizador - Futuristic Stock</title>
+    <style>
+        :root {
+            --primary: #4977DF; --bg-dark: #0f172a; --bg-card: #1e293b;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .form-container { background: var(--bg-card); padding: 35px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 450px; }
+        h2 { margin-top: 0; color: var(--text-main); font-weight: 600; font-size: 22px; margin-bottom: 25px; }
+        label { display: block; margin-top: 15px; font-weight: 500; font-size: 14px; color: var(--text-muted); }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin-top: 8px; background-color: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px; box-sizing: border-box; outline: none; transition: 0.2s; }
+        input:focus { border-color: var(--primary); }
+        .checkbox-container { display: flex; align-items: center; gap: 10px; margin-top: 25px; background: rgba(73, 119, 223, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(73, 119, 223, 0.3); }
+        .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--primary); cursor: pointer; }
+        .checkbox-container label { margin: 0; color: var(--text-main); cursor: pointer; }
+        .helptext, ul.errorlist { display: none; } /* Oculta textos padrão do Django para visual mais limpo */
+        .btn-container { display: flex; gap: 15px; margin-top: 30px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; transition: 0.2s; }
+        .btn-confirm { background: var(--primary); color: white; }
+        .btn-confirm:hover { background: #3b66c4; }
+        .btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-cancel:hover { background: var(--bg-dark); color: var(--text-main); }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>👥 Adicionar Novo Utilizador</h2>
+        <form method="POST">
+            {% csrf_token %}
+            
+            {{ form.as_p }}
+            
+            <div class="checkbox-container">
+                <input type="checkbox" id="is_staff" name="is_staff">
+                <label for="is_staff"><strong>Conta de Administrador</strong><br><small style="color: var(--text-muted); font-weight: normal;">Terá acesso a relatórios, criação de produtos e finanças.</small></label>
+            </div>
+
+            <div class="btn-container">
+                <a href="{% url 'minha_home' %}" class="btn btn-cancel">Cancelar</a>
+                <button type="submit" class="btn btn-confirm">Registar Utilizador</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

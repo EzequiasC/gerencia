@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Vender {{ produto.name }}</title>
+    <style>
+        :root {
+            --c2: #492D73;
+            --c3: #271DC7;
+            --c4: #81D462;
+            --c5: #4977DF;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background: linear-gradient(135deg, #0b0f29, #1a103c, #0a1128);
+            color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card-venda {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(73, 119, 223, 0.3);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .card-venda h2 {
+            margin-top: 0;
+            color: var(--c4);
+        }
+
+        .info-estoque {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .info-estoque strong {
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--c5);
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--c4);
+            box-shadow: 0 0 10px rgba(129, 212, 98, 0.3);
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-confirm {
+            background: #1b5e20;
+            color: white;
+            border: 1px solid var(--c4);
+        }
+
+        .btn-confirm:hover {
+            background: var(--c4);
+            color: #0b0f29;
+            box-shadow: 0 0 15px var(--c4);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: #9ca3af;
+            border: 1px solid #4b5563;
+        }
+
+        .btn-cancel:hover {
+            background: #374151;
+            color: white;
+        }
+
+        .msg-error {
+            background: rgba(127, 29, 29, 0.4);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card-venda">
+        <h2>🛒 Registrar Venda</h2>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="msg-error">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="info-estoque">
+            Produto: <strong>{{ produto.name }}</strong><br><br>
+            Estoque atual: <strong>{{ produto.quantidade_estoque }} un.</strong><br>
+            Preço unitário: R$ {{ produto.preco }}
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <label for="quantidade">Quantidade a vender:</label>
+            <input type="number" id="quantidade" name="quantidade" min="1" max="{{ produto.quantidade_estoque }}" value="1" required autofocus>
+            
+            <div class="btn-container">
+                <a href="{% url 'minha_home' %}" class="btn btn-cancel">Cancelar</a>
+                <button type="submit" class="btn btn-confirm">Confirmar Venda</button>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>
