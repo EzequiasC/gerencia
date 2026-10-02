@@ -1,0 +1,23 @@
+# 1. Ambientes Virtuais (Essencial)
+venv/
+env/
+.venv/
+
+# 2. Base de Dados Local
+db.sqlite3
+
+# 3. Ficheiros Compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 4. Variáveis de Ambiente (Senhas e Chaves Secretas)
+.env
+
+# 5. Ficheiros de Media (Uploads de utilizadores em produção)
+media/
+
+# 6. Configurações do Editor e Sistema Operativo
+.vscode/
+.DS_Store
+Thumbs.db
