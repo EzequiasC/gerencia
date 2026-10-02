@@ -1,23 +1,36 @@
 import csv
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib import messages
+from django.utils import timezone
 from django.core.paginator import Paginator
 from django.http import HttpResponse
-from django.db.models import Sum, Count
+from django.db import transaction
+from django.contrib.auth.models import User
+from django.db.models import Sum, Count, F
 from django.db.models.functions import ExtractWeekDay
-from core.models import Produto, HistoricoVenda
+from core.models import Produto, HistoricoVenda, CaixaTurno
 from core.forms import ProdutoForm, CustomUserCreationForm
+from django.utils import timezone
 
 
 def landing_page(request):
     return render(request, 'core/landing.html')
 
 
-def is_admin(user):
-    return user.is_staff
+def staff_required(view_func):
+    """Decorador personalizado para restringir áreas de admin com mensagem clara."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        if not request.user.is_staff:
+            messages.error(request, 'Você não tem permissão para acessar esta página.')
+            return redirect('minha_home')
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
 def fazer_login(request):
@@ -25,10 +38,13 @@ def fazer_login(request):
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
+            if not user.is_active:
+                messages.error(request, 'Sua conta ainda não foi ativada pelo administrador.')
+                return redirect('login')
             auth_login(request, user)
             return redirect('minha_home')
         else:
-            messages.error(request, 'Utilizador ou palavra-passe inválidos.')
+            messages.error(request, 'Usuário ou senha inválidos.')
     else:
         form = AuthenticationForm()
     return render(request, 'core/login.html', {'form': form})
@@ -44,13 +60,15 @@ def auto_registro(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.is_staff = False  # Segurança: contas públicas nunca nascem como admin
+            user.is_active = False  
+            user.is_staff = False
             user.save()
-            messages.success(request, 'Conta criada com sucesso! Faça login para começar.')
+            messages.success(request, 'Conta cadastrada com sucesso! Aguarde a liberação do administrador.')
             return redirect('login')
         else:
-            for error in form.errors.values():
-                messages.error(request, error)
+            for erros in form.errors.values():
+                for erro in erros:
+                    messages.error(request, erro)
     else:
         form = CustomUserCreationForm()
         
@@ -58,7 +76,7 @@ def auto_registro(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(is_admin, login_url='/')
+@staff_required
 def cadastrar_usuario(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
@@ -66,12 +84,14 @@ def cadastrar_usuario(request):
             user = form.save(commit=False)
             if request.POST.get('is_staff') == 'on':
                 user.is_staff = True
+            user.is_active = True
             user.save()
-            messages.success(request, f'Utilizador "{user.username}" criado com sucesso!')
+            messages.success(request, f'Usuário "{user.username}" criado com sucesso!')
             return redirect('minha_home')
         else:
-            for error in form.errors.values():
-                messages.error(request, error)
+            for erros in form.errors.values():
+                for erro in erros:
+                    messages.error(request, erro)
     else:
         form = CustomUserCreationForm()
         
@@ -81,23 +101,22 @@ def cadastrar_usuario(request):
 @login_required(login_url='login')
 def minha_home(request):
     termo_busca = request.GET.get('busca', '')
+    categoria_filtro = request.GET.get('categoria', '')
+    
+    produtos_lista = Produto.objects.all().order_by('-id')
     
     if termo_busca:
-        produtos_lista = Produto.objects.filter(name__icontains=termo_busca).order_by('-id')
-    else:
-        produtos_lista = Produto.objects.all().order_by('-id')
-    
-    valor_total_geral = 0
-    lucro_total_geral = 0
-    
-    for p in produtos_lista:
-        preco = p.preco or 0
-        custo = p.preco_custo or 0
-        qtd = p.quantidade_estoque or 0
-        lucro_unit = preco - custo
+        produtos_lista = produtos_lista.filter(name__icontains=termo_busca)
         
-        valor_total_geral += (preco * qtd)
-        lucro_total_geral += (lucro_unit * qtd)
+    if categoria_filtro:
+        produtos_lista = produtos_lista.filter(categoria=categoria_filtro)
+    
+    totais_gerais = Produto.objects.aggregate(
+        valor_total=Sum(F('preco') * F('quantidade_estoque')),
+        lucro_total=Sum((F('preco') - F('preco_custo')) * F('quantidade_estoque'))
+    )
+    valor_total_geral = totais_gerais['valor_total'] or 0
+    lucro_total_geral = totais_gerais['lucro_total'] or 0
 
     paginator = Paginator(produtos_lista, 10)
     page_number = request.GET.get('page')
@@ -114,13 +133,15 @@ def minha_home(request):
         'produtos': page_obj, 
         'valor_total_geral': valor_total_geral,
         'lucro_total_geral': lucro_total_geral,
-        'termo_busca': termo_busca
+        'termo_busca': termo_busca,
+        'categoria_filtro': categoria_filtro,
+        'categorias': Produto.CATEGORIAS_CHOICES,
     }
     return render(request, 'core/home.html', contexto)
 
 
 @login_required(login_url='login')
-@user_passes_test(is_admin, login_url='/')
+@staff_required
 def adicionar_produto(request):
     if request.method == 'POST':
         form = ProdutoForm(request.POST)
@@ -136,7 +157,7 @@ def adicionar_produto(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(is_admin, login_url='/')
+@staff_required
 def editar_produto(request, produto_id):
     produto = get_object_or_404(Produto, id=produto_id)
     
@@ -155,17 +176,25 @@ def editar_produto(request, produto_id):
 
 @login_required(login_url='login')
 def realizar_venda(request, produto_id):
-    produto = get_object_or_404(Produto, id=produto_id)
-    
+    # Valida se o usuário possui um caixa aberto
+    caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
+    if not caixa_aberto:
+        messages.error(request, 'Você precisa abrir o caixa antes de realizar vendas.')
+        return redirect('gerenciar_caixa')
+
     if request.method == 'POST':
         try:
             quantidade = int(request.POST.get('quantidade', 0))
-            
             if quantidade <= 0:
                 messages.error(request, 'A quantidade de venda deve ser maior que zero.')
-            elif quantidade > produto.quantidade_estoque:
-                messages.error(request, f'Stock insuficiente! Só possui {produto.quantidade_estoque} un.')
-            else:
+                return redirect('realizar_venda', produto_id=produto_id)
+            
+            with transaction.atomic():
+                produto = Produto.objects.select_for_update().get(id=produto_id)
+                if quantidade > produto.quantidade_estoque:
+                    messages.error(request, f'Estoque insuficiente! Só possui {produto.quantidade_estoque} un.')
+                    return redirect('realizar_venda', produto_id=produto_id)
+                
                 lucro_venda = produto.lucro_unitario * quantidade
                 
                 HistoricoVenda.objects.create(
@@ -174,29 +203,33 @@ def realizar_venda(request, produto_id):
                     quantidade=quantidade,
                     preco_venda_unitario=produto.preco,
                     lucro_obtido=lucro_venda,
-                    usuario=request.user
+                    usuario=request.user,
+                    caixa=caixa_aberto  # <--- Associa ao turno de caixa ativo
                 )
                 
                 produto.quantidade_estoque -= quantidade
                 produto.save()
                 
-                messages.success(request, f'Venda de {quantidade}x "{produto.name}" registada com sucesso!')
-                return redirect('minha_home')
-                
+            messages.success(request, f'Venda de {quantidade}x "{produto.name}" registrada com sucesso!')
+            return redirect('minha_home')
+            
         except ValueError:
             messages.error(request, 'Por favor, digite um número válido.')
+            return redirect('realizar_venda', produto_id=produto_id)
             
+    produto = get_object_or_404(Produto, id=produto_id)
     return render(request, 'core/realizar_venda.html', {'produto': produto})
 
 
 @login_required(login_url='login')
-@user_passes_test(is_admin, login_url='/')
+@staff_required
 def historico_vendas(request):
-    vendas = HistoricoVenda.objects.all().order_by('-data_venda')
-    lucro_total_historico = sum(v.lucro_obtido for v in vendas)
+    vendas_list = HistoricoVenda.objects.all().order_by('-data_venda')
+    vendas_todos = HistoricoVenda.objects.all()
+    lucro_total_historico = sum(v.lucro_obtido for v in vendas_todos)
     
     vendas_por_operador = (
-        vendas.values('usuario__username')
+        vendas_todos.values('usuario__username')
         .annotate(total_faturado=Sum('lucro_obtido'), total_vendas=Count('id'))
     )
     
@@ -206,7 +239,7 @@ def historico_vendas(request):
     dias_map = {1: 'Domingo', 2: 'Segunda', 3: 'Terça', 4: 'Quarta', 5: 'Quinta', 6: 'Sexta', 7: 'Sábado'}
     
     vendas_por_dia = (
-        vendas.annotate(dia_semana=ExtractWeekDay('data_venda'))
+        vendas_todos.annotate(dia_semana=ExtractWeekDay('data_venda'))
         .values('dia_semana')
         .annotate(qtd=Count('id'))
         .order_by('dia_semana')
@@ -218,11 +251,15 @@ def historico_vendas(request):
     for item in vendas_por_dia:
         num_dia = item['dia_semana']
         nome_dia = dias_map.get(num_dia)
-        if nome_dia in dias_contagem:
+        if nome_dia in dias_ordenados:
             dias_contagem[nome_dia] = item['qtd']
 
+    paginator = Paginator(vendas_list, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     contexto = {
-        'vendas': vendas,
+        'vendas': page_obj,
         'lucro_total_historico': lucro_total_historico,
         'operadores_nomes': operadores_nomes,
         'operadores_lucros': operadores_lucros,
@@ -231,9 +268,31 @@ def historico_vendas(request):
     }
     return render(request, 'core/historico_vendas.html', contexto)
 
+@login_required(login_url='login')
+@staff_required
+@require_POST
+def cancelar_venda(request, venda_id):
+    venda = get_object_or_404(HistoricoVenda, id=venda_id)
+    
+    try:
+        with transaction.atomic():
+            if venda.produto:
+                produto = Produto.objects.select_for_update().get(id=venda.produto.id)
+                produto.quantidade_estoque += venda.quantidade
+                produto.save()
+            
+            venda_nome = venda.nome_produto
+            venda.delete()
+            
+        messages.success(request, f'Venda de "{venda_nome}" ({venda.quantidade} un.) estornada com sucesso e estoque devolvido!')
+    except Exception as e:
+        messages.error(request, f'Erro ao estornar venda: {str(e)}')
+        
+    return redirect('historico_vendas')
+
 
 @login_required(login_url='login')
-@user_passes_test(is_admin, login_url='/')
+@staff_required
 def relatorios(request):
     produtos = Produto.objects.all()
     
@@ -273,30 +332,36 @@ def relatorios(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(is_admin, login_url='/')
+@staff_required
 def exportar_csv(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="relatorio_estoque.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['Nome', 'Categoria', 'Preco Custo', 'Preco Venda', 'Estoque', 'Lucro Unitario'])
+    writer.writerow(['Nome', 'Categoria', 'Preço Custo', 'Preço Venda', 'Estoque', 'Lucro Unitário'])
     
     for p in Produto.objects.all():
         writer.writerow([p.name, p.categoria, p.preco_custo, p.preco, p.quantidade_estoque, p.lucro_unitario])
         
     return response
 
+
+
 @login_required(login_url='login')
+@require_POST
 def adicionar_ao_carrinho(request, produto_id):
     produto = get_object_or_404(Produto, id=produto_id)
-    quantidade = int(request.POST.get('quantidade', 1))
+    try:
+        quantidade = int(request.POST.get('quantidade', 1))
+    except (ValueError, TypeError):
+        quantidade = 1
     
     if quantidade <= 0:
         messages.error(request, 'A quantidade deve ser maior que zero.')
         return redirect('minha_home')
         
     if quantidade > produto.quantidade_estoque:
-        messages.error(request, f'Stock insuficiente! Só existem {produto.quantidade_estoque} unidades.')
+        messages.error(request, f'Estoque insuficiente! Só existem {produto.quantidade_estoque} unidades.')
         return redirect('minha_home')
         
     if 'cart' not in request.session:
@@ -309,7 +374,7 @@ def adicionar_ao_carrinho(request, produto_id):
     nova_quantidade = quantidade_atual + quantidade
     
     if nova_quantidade > produto.quantidade_estoque:
-        messages.error(request, 'A quantidade total no carrinho excede o stock disponível.')
+        messages.error(request, 'A quantidade total no carrinho excede o estoque disponível.')
         return redirect('minha_home')
         
     cart[str_id] = nova_quantidade
@@ -324,9 +389,15 @@ def ver_carrinho(request):
     cart = request.session.get('cart', {})
     itens_carrinho = []
     valor_total_carrinho = 0
+    cart_modificado = False
     
-    for produto_id, quantidade in cart.items():
-        produto = get_object_or_404(Produto, id=int(produto_id))
+    for produto_id, quantidade in list(cart.items()):
+        produto = Produto.objects.filter(id=int(produto_id)).first()
+        if not produto:
+            del cart[produto_id]
+            cart_modificado = True
+            continue
+            
         subtotal = produto.preco * quantidade
         valor_total_carrinho += subtotal
         
@@ -336,6 +407,9 @@ def ver_carrinho(request):
             'subtotal': subtotal
         })
         
+    if cart_modificado:
+        request.session.modified = True
+        
     contexto = {
         'itens': itens_carrinho,
         'valor_total_carrinho': valor_total_carrinho
@@ -344,6 +418,7 @@ def ver_carrinho(request):
 
 
 @login_required(login_url='login')
+@require_POST
 def remover_do_carrinho(request, produto_id):
     cart = request.session.get('cart', {})
     str_id = str(produto_id)
@@ -357,36 +432,166 @@ def remover_do_carrinho(request, produto_id):
 
 
 @login_required(login_url='login')
+@require_POST
 def finalizar_venda_carrinho(request):
+    # Valida se o usuário possui um caixa aberto
+    caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
+    if not caixa_aberto:
+        messages.error(request, 'Você precisa abrir o caixa antes de finalizar vendas.')
+        return redirect('gerenciar_caixa')
+
     cart = request.session.get('cart', {})
     
     if not cart:
-        messages.error(request, 'O seu carrinho está vazio.')
+        messages.error(request, 'Seu carrinho está vazio.')
         return redirect('ver_carrinho')
         
-    for produto_id, quantidade in cart.items():
-        produto = get_object_or_404(Produto, id=int(produto_id))
-        
-        if quantidade > produto.quantidade_estoque:
-            messages.error(request, f'Stock insuficiente para "{produto.name}". Venda cancelada.')
-            return redirect('ver_carrinho')
+    itens_recibo = []
+    valor_total_venda = 0
+    
+    try:
+        with transaction.atomic():
+            p_ids = [int(i) for i in cart.keys()]
+            produtos = {p.id: p for p in Produto.objects.select_for_update().filter(id__in=p_ids)}
             
-        lucro_venda = produto.lucro_unitario * quantidade
+            for pid_str, qtd in cart.items():
+                pid = int(pid_str)
+                produto = produtos.get(pid)
+                if produto is None or qtd > produto.quantidade_estoque:
+                    nome = produto.name if produto else 'um item'
+                    raise ValueError(f'Estoque insuficiente para "{nome}". Nenhuma venda foi realizada.')
+                
+                lucro_venda = produto.lucro_unitario * qtd
+                subtotal = produto.preco * qtd
+                valor_total_venda += subtotal
+                
+                HistoricoVenda.objects.create(
+                    produto=produto,
+                    nome_produto=produto.name,
+                    quantidade=qtd,
+                    preco_venda_unitario=produto.preco,
+                    lucro_obtido=lucro_venda,
+                    usuario=request.user,
+                    caixa=caixa_aberto
+                )
+                
+                itens_recibo.append({
+                    'nome': produto.name,
+                    'quantidade': qtd,
+                    'preco_unitario': float(produto.preco),
+                    'subtotal': float(subtotal)
+                })
+                
+                produto.quantidade_estoque -= qtd
+                produto.save()
+                
+    except ValueError as e:
+        messages.error(request, str(e))
+        return redirect('ver_carrinho')
         
-        HistoricoVenda.objects.create(
-            produto=produto,
-            nome_produto=produto.name,
-            quantidade=quantidade,
-            preco_venda_unitario=produto.preco,
-            lucro_obtido=lucro_venda,
-            usuario=request.user
-        )
-        
-        produto.quantidade_estoque -= quantidade
-        produto.save()
-        
+    request.session['ultimo_recibo'] = {
+        'itens': itens_recibo,
+        'total': float(valor_total_venda),
+        'operador': request.user.username,
+        'data': str(timezone.now().strftime('%d/%m/%Y %H:%M'))
+    }
     request.session['cart'] = {}
     request.session.modified = True
     
-    messages.success(request, '🎉 Venda consolidada com sucesso e stock atualizado!')
-    return redirect('minha_home')
+    return redirect('comprovante_venda')
+
+@login_required(login_url='login')
+def comprovante_venda(request):
+    recibo = request.session.get('ultimo_recibo')
+    if not recibo:
+        messages.error(request, 'Nenhum recibo recente encontrado.')
+        return redirect('minha_home')
+        
+    return render(request, 'core/comprovante.html', {'recibo': recibo})
+
+
+@login_required(login_url='login')
+def gerenciar_caixa(request):
+    caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
+    
+    if request.method == 'POST':
+        acao = request.POST.get('acao')
+        
+        if acao == 'abrir':
+            if caixa_aberto:
+                messages.error(request, 'Você já possui um caixa aberto.')
+            else:
+                try:
+                    valor_inicial = float(request.POST.get('valor_inicial', 0))
+                    CaixaTurno.objects.create(usuario=request.user, valor_inicial=valor_inicial, aberto=True)
+                    messages.success(request, 'Caixa aberto com sucesso! Bom turno de vendas.')
+                except ValueError:
+                    messages.error(request, 'Valor inicial inválido.')
+            return redirect('gerenciar_caixa')
+            
+        elif acao == 'fechar':
+            if not caixa_aberto:
+                messages.error(request, 'Não há nenhum caixa aberto para fechar.')
+            else:
+                try:
+                    valor_informado = float(request.POST.get('valor_informado', 0))
+                    
+                    vendas_turno = HistoricoVenda.objects.filter(caixa=caixa_aberto)
+                    total_vendas = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_turno)
+                    
+                    caixa_aberto.valor_informado = valor_informado
+                    caixa_aberto.total_vendas = total_vendas
+                    caixa_aberto.data_fechamento = timezone.now()
+                    caixa_aberto.aberto = False
+                    caixa_aberto.save()
+                    
+                    messages.success(request, 'Caixa fechado com sucesso! Confira o resumo da auditoria abaixo.')
+                except ValueError:
+                    messages.error(request, 'Valor informado inválido.')
+            return redirect('gerenciar_caixa')
+
+    vendas_atuais = []
+    total_parcial = 0
+    total_geral_caixa = 0
+    
+    if caixa_aberto:
+        vendas_atuais = HistoricoVenda.objects.filter(caixa=caixa_aberto).order_by('-data_venda')
+        total_parcial = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_atuais)
+        total_geral_caixa = float(caixa_aberto.valor_inicial) + total_parcial
+
+    contexto = {
+        'caixa_aberto': caixa_aberto,
+        'vendas_atuais': vendas_atuais,
+        'total_parcial': total_parcial,
+        'total_geral_caixa': total_geral_caixa,
+    }
+    return render(request, 'core/caixa.html', contexto)
+
+@login_required(login_url='login')
+def gerenciar_usuarios(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Acesso restrito a administradores.')
+        return redirect('minha_home')
+        
+    usuarios = User.objects.all().order_by('-date_joined')
+    return render(request, 'core/usuarios.html', {'usuarios': usuarios})
+
+@login_required(login_url='login')
+@require_POST
+def alternar_status_usuario(request, user_id):
+    if not request.user.is_staff:
+        messages.error(request, 'Acesso restrito a administradores.')
+        return redirect('minha_home')
+        
+    usuario = get_object_or_404(User, id=user_id)
+    
+    if usuario == request.user:
+        messages.error(request, 'Você não pode alterar o status da sua própria conta.')
+        return redirect('gerenciar_usuarios')
+        
+    usuario.is_active = not usuario.is_active
+    usuario.save()
+    
+    status_txt = "ativado/aprovado" if usuario.is_active else "desativado/bloqueado"
+    messages.success(request, f'O usuário "{usuario.username}" foi {status_txt} com sucesso!')
+    return redirect('gerenciar_usuarios')

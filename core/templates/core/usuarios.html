@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciamento de Usuários - Futuristic Stock</title>
+    <style>
+        :root {
+            --primary: #4977DF; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
+            --bg-dark: #0f172a; --bg-card: #1e293b;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 30px; background-color: var(--bg-dark); color: var(--text-main); }
+        .container { max-width: 1000px; margin: 0 auto; background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        
+        .header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        .header-nav h2 { margin: 0; font-size: 22px; }
+        
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; border: none; transition: 0.2s; display: inline-block; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #16a34a; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 10px 20px; font-size: 14px; }
+        .btn-back:hover { background: var(--bg-dark); color: var(--text-main); }
+
+        .msg-box { padding: 12px 18px; margin-bottom: 20px; border-radius: 8px; font-size: 14px; border: 1px solid; }
+        .msg-success { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #86efac; }
+        .msg-error { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
+        
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .badge-green { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-red { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-purple { background: rgba(73, 119, 223, 0.15); color: #93c5fd; border: 1px solid rgba(73, 119, 223, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-nav">
+            <h2>👥 Gerenciamento de Usuários e Aprovações</h2>
+            <a href="{% url 'minha_home' %}" class="btn btn-back">← Voltar ao Painel</a>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="msg-box msg-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+            Aqui você pode visualizar todas as contas cadastradas no sistema e aprovar novos registros ativando o seu acesso.
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>E-mail</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Data de Cadastro</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td><strong>{{ u.username }}</strong></td>
+                    <td>{{ u.email|default:"Não informado" }}</td>
+                    <td>
+                        {% if u.is_staff %}
+                            <span class="badge badge-purple">Administrador</span>
+                        {% else %}
+                            <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">Operador</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="badge badge-green">Ativo / Aprovado</span>
+                        {% else %}
+                            <span class="badge badge-red">Pendente / Bloqueado</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--text-muted); font-size: 13px;">{{ u.date_joined|date:"d/m/Y H:i" }}</td>
+                    <td style="text-align: right;">
+                        {% if u != request.user %}
+                            <form action="{% url 'alternar_status_usuario' u.id %}" method="POST" style="margin: 0; display: inline;">
+                                {% csrf_token %}
+                                {% if u.is_active %}
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Deseja realmente bloquear este usuário?');">Bloquear</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-success" onclick="return confirm('Deseja aprovar e ativar este usuário?');">Aprovar / Ativar</button>
+                                {% endif %}
+                            </form>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 12px; font-style: italic;">Sua conta</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futuristic Stock - Próxima Geração</title>
+    <title>Futuristic Stock - Controle de estoque</title>
     <style>
         :root {
             --c1: #0009A4;
@@ -14,11 +14,13 @@
             --c5: #4977DF;
         }
 
+        * { box-sizing: border-box; }
+
         body {
             margin: 0;
-            padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #050510, var(--c2), #000000);
+            background: linear-gradient(135deg, #070716, #2a1a45 55%, #05050c);
+            background-attachment: fixed;
             color: #ffffff;
             min-height: 100vh;
             overflow-x: hidden;
@@ -26,86 +28,102 @@
             flex-direction: column;
         }
 
-        /* Canvas das Partículas no fundo */
+        a:focus-visible {
+            outline: 3px solid var(--c5);
+            outline-offset: 3px;
+        }
+
         #particles-canvas {
             position: fixed;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
             height: 100%;
             z-index: -1;
             pointer-events: none;
         }
 
-        /* Classe de Efeito Vidro Fosco (Glassmorphism) */
+        /* Vidro fosco, mais discreto */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 50px;
-            border-bottom: 1px solid rgba(129, 212, 98, 0.2);
+            padding: 18px clamp(20px, 5vw, 50px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .logo {
-            font-size: 26px;
-            font-weight: bold;
+            font-size: 22px;
+            font-weight: 700;
             color: var(--c4);
-            letter-spacing: 2px;
-            text-shadow: 0 0 15px rgba(129, 212, 98, 0.5);
+            letter-spacing: 1.5px;
+            text-decoration: none;
         }
 
         .btn-entrar {
+            display: inline-block;
             text-decoration: none;
-            padding: 12px 25px;
+            padding: 11px 24px;
             border-radius: 30px;
-            font-weight: bold;
+            font-weight: 600;
             font-size: 16px;
-            background: transparent;
             color: #ffffff;
-            border: 2px solid var(--c5);
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(73, 119, 223, 0.3);
+            border: 1.5px solid var(--c5);
+            transition: background 0.25s ease, border-color 0.25s ease;
+        }
+
+        .btn-entrar {
+            transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
         }
 
         .btn-entrar:hover {
-            background: var(--c5);
-            box-shadow: 0 0 25px var(--c5);
+            background: rgba(73, 119, 223, 0.35);
             transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(73, 119, 223, 0.3);
         }
+
+        .btn-primario {
+            background: var(--c4);
+            color: var(--c1);
+            border-color: var(--c4);
+            font-size: 18px;
+            font-weight: 700;
+            padding: 14px 30px;
+        }
+
+        .btn-primario:hover { background: #95e077; border-color: #95e077; box-shadow: 0 6px 18px rgba(129, 212, 98, 0.3); }
 
         .main-container {
             display: flex;
             align-items: center;
             justify-content: space-around;
-            padding: 50px;
+            padding: 50px clamp(20px, 5vw, 50px);
             flex: 1;
             flex-wrap: wrap;
             gap: 40px;
-            z-index: 1;
         }
 
         .text-section {
-            max-width: 500px;
+            max-width: 520px;
             padding: 40px;
             border-radius: 20px;
             transition: transform 0.1s;
         }
 
         .text-section h1 {
-            font-size: 52px;
-            margin-top: 0;
-            margin-bottom: 20px;
+            font-size: clamp(36px, 5vw, 52px);
+            margin: 0 0 20px;
             line-height: 1.1;
-            background: linear-gradient(90deg, #ffffff, var(--c4));
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff 40%, #b9e8a6);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -113,215 +131,219 @@
             font-size: 18px;
             color: #d1d5db;
             line-height: 1.6;
-            margin-bottom: 35px;
+            margin: 0 0 32px;
         }
 
-        /* O Segredo do Parallax + Lata Girando */
-        .parallax-wrapper {
-            perspective: 1000px; /* Dá a noção de profundidade 3D pro mouse */
-        }
+        /* Lata: inclina com o mouse e gira sozinha */
+        .parallax-wrapper { perspective: 1000px; }
 
         .image-section {
             text-align: center;
-            position: relative;
-            /* Transição suave pro movimento do mouse */
-            transition: transform 0.1s ease-out; 
+            transform-style: preserve-3d;
+            transition: transform 0.12s ease-out;
         }
 
-        .image-section img {
-            width: 320px;
-            height: auto;
-            filter: drop-shadow(0px 20px 30px rgba(73, 119, 223, 0.6));
-            /* A lata gira no próprio eixo infinitamente */
+        .giro {
+            position: relative;
+            width: 280px;
+            margin: 0 auto;
+            transform-style: preserve-3d;
             animation: girarLata 7s infinite linear;
         }
 
+        .giro img {
+            display: block;
+            width: 100%;
+            height: auto;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            filter: drop-shadow(0 18px 24px rgba(73, 119, 223, 0.35));
+        }
+
+        /* Segunda imagem nas costas, para o verso não ficar espelhado */
+        .giro .verso {
+            position: absolute;
+            inset: 0;
+            transform: rotateY(180deg);
+        }
+
         @keyframes girarLata {
-            0% { transform: rotateY(0deg) translateY(0px); }
-            25% { transform: rotateY(90deg) translateY(-10px); }
-            50% { transform: rotateY(180deg) translateY(0px); }
-            75% { transform: rotateY(270deg) translateY(10px); }
-            100% { transform: rotateY(360deg) translateY(0px); }
+            0%   { transform: rotateY(0deg)   translateY(0); }
+            25%  { transform: rotateY(90deg)  translateY(-10px); }
+            50%  { transform: rotateY(180deg) translateY(0); }
+            75%  { transform: rotateY(270deg) translateY(10px); }
+            100% { transform: rotateY(360deg) translateY(0); }
         }
 
         .shadow-floor {
-            width: 220px;
-            height: 20px;
-            background: rgba(0,0,0,0.6);
+            width: 200px;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.5);
             border-radius: 50%;
-            margin: 20px auto 0 auto;
+            margin: 28px auto 0;
             filter: blur(8px);
             animation: pulseShadow 7s infinite linear;
         }
 
         @keyframes pulseShadow {
-            0%, 50%, 100% { transform: scale(1); opacity: 0.8; }
-            25%, 75% { transform: scale(0.8); opacity: 0.4; }
+            0%, 50%, 100% { transform: scale(1);   opacity: 0.75; }
+            25%, 75%      { transform: scale(0.8); opacity: 0.4; }
         }
 
-        /* Seção de Features (Cards) */
         .features-container {
             display: flex;
             justify-content: center;
-            gap: 30px;
-            padding: 40px 50px;
+            gap: 24px;
+            padding: 20px clamp(20px, 5vw, 50px) 56px;
             flex-wrap: wrap;
-            z-index: 1;
         }
 
         .feature-card {
             flex: 1;
             min-width: 250px;
-            max-width: 300px;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
+            max-width: 320px;
+            padding: 26px;
+            border-radius: 14px;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         .feature-card:hover {
             transform: translateY(-10px);
-            border-color: var(--c4);
-            box-shadow: 0 15px 30px rgba(129, 212, 98, 0.2);
+            border-color: rgba(129, 212, 98, 0.45);
+            box-shadow: 0 14px 28px rgba(129, 212, 98, 0.12);
         }
 
-        .feature-card .icon {
-            font-size: 40px;
-            margin-bottom: 15px;
-            text-shadow: 0 0 15px var(--c5);
-        }
-
-        .feature-card h3 {
-            margin: 0 0 10px 0;
-            color: #fff;
-        }
+        .feature-card h3 { margin: 0 0 8px; font-size: 19px; }
 
         .feature-card p {
             margin: 0;
-            color: #a1a1aa;
-            font-size: 14px;
+            color: #c4c7d0;
+            font-size: 15px;
             line-height: 1.5;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .giro, .shadow-floor { animation: none; }
+            .image-section, .text-section { transition: none; }
+            .feature-card:hover, .btn-entrar:hover { transform: none; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Fundo de Partículas -->
-    <canvas id="particles-canvas"></canvas>
+    <canvas id="particles-canvas" aria-hidden="true"></canvas>
 
     <header class="glass-panel">
-        <div class="logo">⚡ FUTURISTIC STOCK</div>
-        <a href="{% url 'login' %}" class="btn-entrar">🚪 Entrar no Sistema</a>
+        <a class="logo" href="/">FUTURISTIC STOCK</a>
+        <a href="{% url 'login' %}" class="btn-entrar">Entrar no sistema</a>
     </header>
 
-    <div class="main-container">
-        <!-- Textos em Painel Glassmorphism -->
+    <main class="main-container">
         <div class="text-section glass-panel" id="text-parallax">
-            <h1>Controle Absoluto de Estoque</h1>
-            <p>Um sistema inteligente projetado para o seu negócio. Calcule lucros em tempo real, gerencie vendas com baixa automática e tome decisões com base em dados de alta precisão.</p>
-            <a href="{% url 'login' %}" class="btn-entrar" style="background: var(--c4); color: #0009A4; border: none; font-size: 18px; padding: 15px 30px; display: inline-block;">Acessar Meu Painel 🚀</a>
+            <h1>Venda mais. Controle melhor. Saiba quanto você realmente lucra.</h1>
+            <p>Tenha estoque, vendas, custos e lucros organizados em um único sistema. Registre cada venda, atualize seu estoque automaticamente e acompanhe os resultados da sua loja de forma simples.</p>
+            <a href="{% url 'login' %}" class="btn-entrar btn-primario">Entrar no meu painel</a>
         </div>
 
-        <!-- A Lata Gigante com Parallax do Mouse -->
         <div class="parallax-wrapper">
             <div class="image-section" id="can-parallax">
-                <img src="{% static 'core/latinha.png' %}" alt="Lata 3D Giratória">
+                <div class="giro">
+                    <img src="{% static 'latinha.png' %}" alt="Lata de refrigerante">
+                    <img class="verso" src="{% static 'latinha.png' %}" alt="" aria-hidden="true">
+                </div>
                 <div class="shadow-floor"></div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Cards de Funcionalidades -->
-    <div class="features-container">
+    <section class="features-container">
         <div class="feature-card glass-panel">
-            <div class="icon">🛒</div>
-            <h3>Baixa em Tempo Real</h3>
-            <p>Registre vendas com 1 clique. O estoque é atualizado instantaneamente no banco de dados.</p>
+            <h3>Controle seu estoque em tempo real</h3>
+            <p>Cada venda atualiza automaticamente a quantidade disponível. Tenha uma visão clara do seu estoque sem precisar conferir tudo manualmente.</p>
         </div>
         <div class="feature-card glass-panel">
-            <div class="icon">📈</div>
-            <h3>Margem de Lucro</h3>
-            <p>Controle o preço de custo e venda. Saiba exatamente qual será o seu lucro projetado.</p>
+            <h3>Entenda seus resultados</h3>
+            <p>Tenha custo, preço de venda, margem e lucro organizados para entender exatamente o resultado de cada produto.</p>
         </div>
         <div class="feature-card glass-panel">
-            <div class="icon">🔒</div>
-            <h3>Segurança Total</h3>
-            <p>Sistema protegido por autenticação. Somente pessoal autorizado tem acesso aos dados sensíveis.</p>
+            <h3>Gestão feita para sua equipe</h3>
+            <p>Adicione usuários, organize os acessos e mantenha as informações da sua loja centralizadas em um único lugar.</p>
         </div>
-    </div>
+    </section>
 
     <script>
-        document.addEventListener("mousemove", function(e) {
-            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
-            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
-            
-            // Movimenta a lata
-            const can = document.getElementById("can-parallax");
-            can.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        (function () {
+            var reduzir = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-            // Movimenta o painel de texto de forma mais sutil
-            const text = document.getElementById("text-parallax");
-            text.style.transform = `translate(${xAxis / 2}px, ${yAxis / 2}px)`;
-        });
+            // Inclinação da lata com o mouse
+            var can = document.getElementById('can-parallax');
+            var texto = document.getElementById('text-parallax');
+            document.addEventListener('mousemove', function (e) {
+                if (reduzir.matches) return;
+                var x = (window.innerWidth / 2 - e.clientX) / 25;
+                var y = (window.innerHeight / 2 - e.clientY) / 25;
+                can.style.transform = 'rotateY(' + x + 'deg) rotateX(' + y + 'deg)';
+                texto.style.transform = 'translate(' + (x / 2) + 'px, ' + (y / 2) + 'px)';
+            });
 
-        const canvas = document.getElementById("particles-canvas");
-        const ctx = canvas.getContext("2d");
-        
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+            // Partículas
+            var canvas = document.getElementById('particles-canvas');
+            var ctx = canvas.getContext('2d');
+            var dpr = window.devicePixelRatio || 1;
+            var w, h, particulas = [];
 
-        let particlesArray = [];
-        const numberOfParticles = 80;
-
-        class Particle {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2;
-                this.speedX = Math.random() * 1 - 0.5;
-                this.speedY = Math.random() * 1 - 0.5;
+            function ajustar() {
+                w = window.innerWidth;
+                h = window.innerHeight;
+                canvas.width = w * dpr;
+                canvas.height = h * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                
-                if (this.x > canvas.width) this.x = 0;
-                if (this.x < 0) this.x = canvas.width;
-                if (this.y > canvas.height) this.y = 0;
-                if (this.y < 0) this.y = canvas.height;
-            }
-            draw() {
-                ctx.fillStyle = 'rgba(129, 212, 98, 0.5)'; // Cor verde da sua paleta
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
 
-        function init() {
-            particlesArray = [];
-            for (let i = 0; i < numberOfParticles; i++) {
-                particlesArray.push(new Particle());
+            function criar() {
+                var total = w < 768 ? 25 : 50;
+                particulas = [];
+                for (var i = 0; i < total; i++) {
+                    particulas.push({
+                        x: Math.random() * w,
+                        y: Math.random() * h,
+                        r: Math.random() * 1.6 + 0.4,
+                        vx: (Math.random() - 0.5) * 0.35,
+                        vy: (Math.random() - 0.5) * 0.35
+                    });
+                }
             }
-        }
 
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < particlesArray.length; i++) {
-                particlesArray[i].update();
-                particlesArray[i].draw();
+            function desenhar() {
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = 'rgba(129, 212, 98, 0.3)';
+                for (var i = 0; i < particulas.length; i++) {
+                    var p = particulas[i];
+                    if (!reduzir.matches) {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        if (p.x > w) p.x = 0;
+                        if (p.x < 0) p.x = w;
+                        if (p.y > h) p.y = 0;
+                        if (p.y < 0) p.y = h;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                requestAnimationFrame(desenhar);
             }
-            requestAnimationFrame(animate);
-        }
 
-        init();
-        animate();
+            var timer;
+            window.addEventListener('resize', function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () { ajustar(); criar(); }, 150);
+            });
 
-        window.addEventListener('resize', function() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            init();
-        });
+            ajustar();
+            criar();
+            desenhar();
+        })();
     </script>
 </body>
 </html>

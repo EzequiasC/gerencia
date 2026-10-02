@@ -6,7 +6,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #4977DF; --success: #22c55e; --warning: #f59e0b;
+            --primary: #4977DF; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
             --bg-dark: #0f172a; --bg-card: #1e293b;
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
@@ -15,8 +15,10 @@
         .header-nav { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 20px 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
         .header-nav h1 { margin: 0; font-size: 24px; font-weight: 600; }
         
-        .btn { padding: 10px 18px; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: white; border: 1px solid var(--border); background: transparent; transition: 0.2s; }
+        .btn { padding: 10px 18px; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: white; border: 1px solid var(--border); background: transparent; transition: 0.2s; display: inline-block; cursor: pointer; }
         .btn:hover { background: #334155; }
+        .btn-danger { background: var(--danger); border-color: var(--danger); padding: 6px 12px; font-size: 12px; }
+        .btn-danger:hover { background: #dc2626; }
 
         .card-lucro { background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); border-left: 4px solid var(--success); margin-bottom: 25px; }
         .card-lucro span { display: block; font-size: 26px; font-weight: bold; color: var(--success); margin-top: 5px; }
@@ -28,11 +30,17 @@
         .chart-box h3 { margin-top: 0; font-size: 16px; color: var(--text-main); margin-bottom: 15px; }
 
         .table-container { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
-        .table-header, .table-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 2fr; gap: 15px; padding: 15px 20px; align-items: center; }
+        /* Ajustado o grid para suportar a nova coluna de Ações */
+        .table-header, .table-row { display: grid; grid-template-columns: 2fr 0.8fr 1fr 1fr 1.2fr 1.5fr 1fr; gap: 15px; padding: 15px 20px; align-items: center; }
         .table-header { background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); font-size: 12px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); }
         .table-row { border-bottom: 1px solid var(--border); font-size: 14px; }
         .table-row:last-child { border-bottom: none; }
         .table-row:hover { background: rgba(255,255,255,0.01); }
+
+        /* Paginação */
+        .pagination { display: flex; justify-content: center; margin-top: 25px; }
+        .step-links { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .current { padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; background: var(--bg-card); border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -43,11 +51,11 @@
     </div>
 
     <div class="card-lucro">
-        Lucro Total Acumulado via Vendas Registadas
+        Lucro Total Acumulado via Vendas Registradas
         <span>R$ {{ lucro_total_historico|floatformat:2 }}</span>
     </div>
 
-    <!-- Secção dos Gráficos Avançados -->
+    <!-- Seção dos Gráficos Avançados -->
     <div class="charts-grid">
         <div class="chart-box">
             <h3>👤 Lucro Gerado por Operador</h3>
@@ -73,6 +81,7 @@
             <div>Lucro Obtido</div>
             <div>Operador</div>
             <div>Data / Hora</div>
+            <div>Ações</div>
         </div>
 
         {% for v in vendas %}
@@ -83,17 +92,39 @@
                 <div style="color: var(--success); font-weight: 600;">R$ {{ v.lucro_obtido|floatformat:2 }}</div>
                 <div>👤 {{ v.usuario.username|default:"Sistema" }}</div>
                 <div style="color: var(--text-muted); font-size: 13px;">{{ v.data_venda|date:"d/m/Y H:i" }}</div>
+                <div>
+                    <form action="{% url 'cancelar_venda' v.id %}" method="POST" style="margin: 0;" onsubmit="return confirm('Tem certeza que deseja estornar esta venda e devolver os itens ao estoque?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Estornar</button>
+                    </form>
+                </div>
             </div>
         {% empty %}
             <div style="padding: 40px; text-align: center; color: var(--text-muted);">
-                Ainda nenhuma venda registada no histórico.
+                Ainda nenhuma venda registrada no histórico.
             </div>
         {% endfor %}
     </div>
 
-    <!-- Scripts de Configuração dos Gráficos -->
+    {% if vendas.paginator.num_pages > 1 %}
+    <nav class="pagination" aria-label="Paginação">
+        <span class="step-links">
+            {% if vendas.has_previous %}
+                <a href="?page=1" class="btn">&laquo; Início</a>
+                <a href="?page={{ vendas.previous_page_number }}" class="btn">Anterior</a>
+            {% endif %}
+
+            <span class="current">Página {{ vendas.number }} de {{ vendas.paginator.num_pages }}</span>
+
+            {% if vendas.has_next %}
+                <a href="?page={{ vendas.next_page_number }}" class="btn">Próxima</a>
+                <a href="?page={{ vendas.paginator.num_pages }}" class="btn">Fim &raquo;</a>
+            {% endif %}
+        </span>
+    </nav>
+    {% endif %}
+
     <script>
-        // 1. Gráfico de Operadores
         const ctxOp = document.getElementById('operadorChart').getContext('2d');
         new Chart(ctxOp, {
             type: 'doughnut',
