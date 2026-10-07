@@ -41,11 +41,9 @@
         
         .header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; gap: 10px; }
         
-        /* Grupo para título e botão tema lado a lado */
         .title-group { display: flex; align-items: center; gap: 15px; }
         .title-group h2 { margin: 0; font-size: 22px; }
 
-        /* Estilo do botão de tema */
         .btn-theme { 
             background: transparent; 
             border: 1px solid var(--border); 
@@ -119,7 +117,6 @@
         {% endif %}
 
         {% if not caixa_aberto %}
-            <!-- FORMULÁRIO DE ABERTURA DE CAIXA -->
             <div class="box-info">
                 <h3>Abrir Novo Turno de Caixa</h3>
                 <p style="color: var(--text-muted); font-size: 14px;">Informe o valor em dinheiro trocado disponível no início do turno (fundo de caixa).</p>
@@ -135,7 +132,6 @@
                 </form>
             </div>
         {% else %}
-            <!-- PAINEL DE CAIXA ABERTO -->
             <div class="box-info" style="border-left: 4px solid var(--success);">
                 <h3 style="margin-top: 0; color: var(--success);">🟢 Caixa Aberto</h3>
                 <p style="font-size: 14px; margin-bottom: 5px;">Operador: <strong>{{ request.user.username }}</strong></p>
@@ -170,7 +166,6 @@
                 </form>
             </div>
 
-            <!-- VENDAS REALIZADAS NESTE TURNO -->
             <h3 style="margin-top: 30px;">Vendas Realizadas Neste Turno</h3>
             <table>
                 <thead>
@@ -199,7 +194,6 @@
         {% endif %}
     </div>
 
-    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
     <script>
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');

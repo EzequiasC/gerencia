@@ -4,20 +4,18 @@
     <meta charset="UTF-8">
     <title>Carrinho de Compras - Futuristic Stock</title>
     <style>
-        /* TEMA ESCURO (Padrão) */
         :root {
             --primary: #4977DF; --success: #22c55e; --danger: #ef4444; 
             --bg-dark: #0f172a; --bg-card: #1e293b;
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
 
-        /* TEMA CLARO (Ativado pelo botão) */
         [data-theme="light"] {
-            --bg-dark: #f1f5f9; /* Fundo cinza bem claro */
-            --bg-card: #ffffff; /* Cartão branco */
-            --text-main: #0f172a; /* Texto escuro */
-            --text-muted: #64748b; /* Texto secundário acinzentado */
-            --border: #cbd5e1; /* Borda suave */
+            --bg-dark: #f1f5f9; 
+            --bg-card: #ffffff; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+            --border: #cbd5e1;
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-dark); color: var(--text-main); padding: 30px; transition: background-color 0.3s, color 0.3s; }
@@ -26,7 +24,6 @@
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         h2 { margin: 0; color: var(--text-main); font-weight: 600; font-size: 24px; }
         
-        /* Estilo do Botão de Tema */
         .btn-theme { background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
         .btn-theme:hover { background: var(--border); }
 
@@ -48,7 +45,6 @@
 <body>
     <div class="container">
         
-        <!-- Cabeçalho com o Título e o Botão de Tema -->
         <div class="header-top">
             <h2>🛒 Carrinho de Compras</h2>
             <button id="btn-themeToggle" class="btn-theme">
@@ -114,31 +110,26 @@
         {% endif %}
     </div>
 
-    <!-- SCRIPT DE TROCA DE TEMA -->
     <script>
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');
         const themeText = document.getElementById('theme-text');
         const htmlElement = document.documentElement;
 
-        // 1. Verifica se já existe uma preferência salva no navegador
         const savedTheme = localStorage.getItem('theme') || 'dark';
         
-        // 2. Aplica o tema salvo imediatamente ao carregar a página
         htmlElement.setAttribute('data-theme', savedTheme);
         updateButtonUI(savedTheme);
 
-        // 3. O que acontece quando clica no botão
         btnTheme.addEventListener('click', () => {
             const currentTheme = htmlElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             
             htmlElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme); // Salva a escolha
+            localStorage.setItem('theme', newTheme); 
             updateButtonUI(newTheme);
         });
 
-        // Atualiza o texto e ícone do botão
         function updateButtonUI(theme) {
             if (theme === 'dark') {
                 themeIcon.textContent = '☀️';

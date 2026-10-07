@@ -56,7 +56,6 @@
             margin-bottom: 25px; 
         }
 
-        /* Botão do Tema */
         .btn-theme {
             position: absolute;
             top: 30px;
@@ -75,7 +74,6 @@
         }
         .btn-theme:hover { background: var(--border); }
         
-        /* Estilização nativa dos campos gerados pelo Django (form.as_p) */
         label { 
             display: block; 
             margin-top: 15px; 
@@ -146,7 +144,6 @@
 </head>
 <body>
     <div class="form-container">
-        <!-- Botão Sol/Lua -->
         <button id="btn-themeToggle" class="btn-theme">
             <span id="theme-icon">☀️</span>
         </button>
@@ -164,7 +161,6 @@
         </form>
     </div>
 
-    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
     <script>
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');

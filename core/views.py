@@ -389,13 +389,11 @@ def atualizar_quantidade_carrinho(request, produto_id, acao):
     produto = get_object_or_404(Produto, id=produto_id)
     str_id = str(produto_id)
     
-    # Verifica se o carrinho existe e se o produto está nele
     if 'cart' in request.session and str_id in request.session['cart']:
         cart = request.session['cart']
         qtd_atual = cart[str_id]
         
         if acao == 'aumentar':
-            # Verifica se não ultrapassa o estoque antes de aumentar
             if qtd_atual + 1 > produto.quantidade_estoque:
                 messages.error(request, f'Estoque insuficiente! Máximo disponível: {produto.quantidade_estoque} un.')
             else:
@@ -405,11 +403,9 @@ def atualizar_quantidade_carrinho(request, produto_id, acao):
             if qtd_atual > 1:
                 cart[str_id] -= 1
             else:
-                # Se a quantidade chegar a zero, remove o item do carrinho
                 del cart[str_id]
                 messages.info(request, f'"{produto.name}" removido do carrinho.')
                 
-        # Salva as alterações na sessão
         request.session.modified = True
         
         return redirect('ver_carrinho')
@@ -464,7 +460,6 @@ def remover_do_carrinho(request, produto_id):
 @login_required(login_url='login')
 @require_POST
 def finalizar_venda_carrinho(request):
-    # Valida se o usuário possui um caixa aberto
     caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
     if not caixa_aberto:
         messages.error(request, 'Você precisa abrir o caixa antes de finalizar vendas.')

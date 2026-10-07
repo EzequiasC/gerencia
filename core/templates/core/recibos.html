@@ -10,7 +10,6 @@
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
 
-        /* TEMA CLARO */
         [data-theme="light"] {
             --bg-dark: #f1f5f9;
             --bg-card: #ffffff;
@@ -53,7 +52,6 @@
         .title-group { display: flex; align-items: center; gap: 15px; }
         .header-nav h2 { margin: 0; font-size: 22px; }
         
-        /* Botão do Tema */
         .btn-theme { 
             background: transparent; 
             border: 1px solid var(--border); 
@@ -101,7 +99,6 @@
                 </button>
             </div>
             
-            <!-- Link para voltar direto para o Caixa -->
             <a href="{% url 'gerenciar_caixa' %}" class="btn btn-back">← Voltar ao Caixa</a>
         </div>
 
@@ -145,7 +142,6 @@
         </table>
     </div>
 
-    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
     <script>
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');

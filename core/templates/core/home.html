@@ -17,7 +17,6 @@
 
         * { box-sizing: border-box; }
 
-        /* TEMA CLARO */
         [data-theme="light"] {
             --texto: #0f172a;
             --muted: #64748b;
@@ -56,7 +55,6 @@
 
         .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
 
-        /* Cabeçalho */
         .dashboard-header {
             display: flex; justify-content: space-between; align-items: center;
             flex-wrap: wrap; gap: 16px;
@@ -85,7 +83,6 @@
         }
         .btn-theme:hover { background: rgba(255, 255, 255, 0.08); }
 
-        /* Botões */
         .btn {
             display: inline-flex; align-items: center; justify-content: center;
             padding: 10px 20px; border-radius: 30px;
@@ -188,7 +185,6 @@
             <p>Controle de estoque e vendas</p>
         </div>
         <div class="user-actions">
-            <!-- BOTÃO DE TEMA -->
             <button id="btn-themeToggle" class="btn-theme">
                 <span id="theme-icon">☀️</span> <span id="theme-text">Modo Claro</span>
             </button>
@@ -362,7 +358,6 @@
         ajustar(); desenhar();
     })();
     
-    // SCRIPT DE TEMA CLARO/ESCURO
     const btnTheme = document.getElementById('btn-themeToggle');
     const themeIcon = document.getElementById('theme-icon');
     const themeText = document.getElementById('theme-text');

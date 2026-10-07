@@ -46,7 +46,6 @@
         
         .header-actions { display: flex; align-items: center; gap: 12px; }
 
-        /* Estilo do botão de tema */
         .btn-theme { 
             background: transparent; 
             border: 1px solid var(--border); 
@@ -83,7 +82,6 @@
         .table-row:last-child { border-bottom: none; }
         .table-row:hover { background: rgba(100, 116, 139, 0.03); }
 
-        /* Paginação */
         .pagination { display: flex; justify-content: center; margin-top: 25px; }
         .step-links { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
         .current { padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; background: var(--bg-card); border: 1px solid var(--border); }
@@ -123,7 +121,6 @@
         </div>
     </div>
 
-    <!-- Tabela de Auditoria -->
     <div class="table-container">
         <div class="table-header">
             <div>Produto</div>
@@ -176,7 +173,6 @@
     {% endif %}
 
     <script>
-        // 1. Gráfico de Operador (Doughnut)
         const ctxOp = document.getElementById('operadorChart').getContext('2d');
         const operadorChart = new Chart(ctxOp, {
             type: 'doughnut',
@@ -197,7 +193,6 @@
             }
         });
 
-        // 2. Gráfico de Dias da Semana (Bar)
         const ctxDias = document.getElementById('diasChart').getContext('2d');
         const diasChart = new Chart(ctxDias, {
             type: 'bar',
@@ -228,7 +223,6 @@
             }
         });
 
-        // SCRIPT DE TEMA CLARO/ESCURO
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');
         const themeText = document.getElementById('theme-text');
@@ -247,7 +241,6 @@
                 localStorage.setItem('theme', newTheme);
                 updateButtonUI(newTheme);
                 
-                // Recarrega a página levemente ou atualiza as cores dos gráficos se necessário
                 setTimeout(() => window.location.reload(), 150);
             });
         }

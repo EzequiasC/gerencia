@@ -17,7 +17,6 @@
             --input-bg: rgba(255, 255, 255, 0.1);
         }
 
-        /* TEMA CLARO */
         [data-theme="light"] {
             --bg-body: #f1f5f9;
             --bg-card: #ffffff;
@@ -55,7 +54,6 @@
             transition: background-color 0.3s, border-color 0.3s;
         }
 
-        /* Botão do Tema */
         .btn-theme {
             position: absolute;
             top: 20px;
@@ -179,7 +177,6 @@
 <body>
 
     <div class="card-venda">
-        <!-- Botão Sol/Lua -->
         <button id="btn-themeToggle" class="btn-theme">
             <span id="theme-icon">☀️</span>
         </button>
@@ -210,7 +207,6 @@
         </form>
     </div>
 
-    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
     <script>
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');

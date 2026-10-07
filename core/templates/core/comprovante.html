@@ -13,7 +13,6 @@
             --primary: #2563eb;
         }
 
-        /* TEMA CLARO */
         [data-theme="light"] {
             --bg-dark: #f1f5f9;
             --bg-card: #ffffff;
@@ -47,7 +46,6 @@
             transition: background-color 0.3s, border-color 0.3s;
         }
 
-        /* Botão de Tema */
         .theme-container {
             width: 100%;
             max-width: 400px;
@@ -91,7 +89,6 @@
         .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
         .btn-back:hover { background: var(--bg-dark); color: var(--text-main); }
 
-        /* REGRAS PARA IMPRESSORA (Força branco e preto no papel) */
         @media print {
             body { background: white !important; color: black !important; padding: 0; }
             .receipt { background: white !important; color: black !important; box-shadow: none; max-width: 100%; padding: 0; border: none; }
@@ -102,7 +99,6 @@
 </head>
 <body>
     
-    <!-- Container do Botão de Tema (Oculto na impressão) -->
     <div class="theme-container no-print">
         <button id="btn-themeToggle" class="btn-theme">
             <span id="theme-icon">☀️</span> <span id="theme-text" style="display:none;">Modo Claro</span>
@@ -150,7 +146,6 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
     <script>
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');

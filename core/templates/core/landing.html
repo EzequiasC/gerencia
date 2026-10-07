@@ -19,7 +19,6 @@
             --bg-glass: rgba(255, 255, 255, 0.04);
         }
 
-        /* TEMA CLARO */
         [data-theme="light"] {
             --bg-body: #f1f5f9;
             --text-main: #0f172a;
@@ -57,7 +56,6 @@
             pointer-events: none;
         }
 
-        /* Vidro fosco */
         .glass-panel {
             background: var(--bg-glass);
             backdrop-filter: blur(10px);
@@ -88,7 +86,6 @@
             gap: 15px;
         }
 
-        /* Botão de Tema */
         .btn-theme { 
             background: transparent; 
             border: 1px solid var(--border-glass); 
@@ -168,7 +165,6 @@
             margin: 0 0 32px;
         }
 
-        /* Lata */
         .parallax-wrapper { perspective: 1000px; }
 
         .image-section {
@@ -314,7 +310,6 @@
         (function () {
             var reduzir = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-            // Inclinação da lata com o mouse
             var can = document.getElementById('can-parallax');
             var texto = document.getElementById('text-parallax');
             document.addEventListener('mousemove', function (e) {
@@ -325,7 +320,6 @@
                 texto.style.transform = 'translate(' + (x / 2) + 'px, ' + (y / 2) + 'px)';
             });
 
-            // Partículas
             var canvas = document.getElementById('particles-canvas');
             var ctx = canvas.getContext('2d');
             var dpr = window.devicePixelRatio || 1;
@@ -384,7 +378,6 @@
             desenhar();
         })();
 
-        // SCRIPT DE TEMA CLARO/ESCURO
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');
         const themeText = document.getElementById('theme-text');
