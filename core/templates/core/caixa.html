@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Controle de Caixa - Futuristic Stock</title>
@@ -9,11 +9,60 @@
             --bg-dark: #0f172a; --bg-card: #1e293b;
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 30px; background-color: var(--bg-dark); color: var(--text-main); }
-        .container { max-width: 900px; margin: 0 auto; background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
-        .header-nav h2 { margin: 0; font-size: 22px; }
+
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 30px; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            transition: background-color 0.3s, color 0.3s;
+        }
         
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: var(--bg-card); 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        
+        /* Grupo para título e botão tema lado a lado */
+        .title-group { display: flex; align-items: center; gap: 15px; }
+        .title-group h2 { margin: 0; font-size: 22px; }
+
+        /* Estilo do botão de tema */
+        .btn-theme { 
+            background: transparent; 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: 0.2s; 
+        }
+        .btn-theme:hover { background: var(--border); }
+        
+        .nav-actions { display: flex; gap: 10px; }
+
         .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; border: none; transition: 0.2s; display: inline-block; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: #3b5bdb; }
@@ -23,6 +72,8 @@
         .btn-danger:hover { background: #dc2626; }
         .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
         .btn-back:hover { background: var(--bg-dark); color: var(--text-main); }
+        .btn-info { background: #0ea5e9; color: white; }
+        .btn-info:hover { background: #0284c7; }
 
         .msg-box { padding: 12px 18px; margin-bottom: 20px; border-radius: 8px; font-size: 14px; border: 1px solid; }
         .msg-success { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #86efac; }
@@ -36,7 +87,7 @@
 
         form { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
         label { font-size: 14px; color: var(--text-muted); }
-        input[type="number"] { padding: 12px; border-radius: 8px; background: var(--bg-dark); border: 1px solid var(--border); color: white; font-size: 16px; }
+        input[type="number"] { padding: 12px; border-radius: 8px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); font-size: 16px; transition: 0.3s; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -46,8 +97,19 @@
 <body>
     <div class="container">
         <div class="header-nav">
-            <h2>💰 Controle de Caixa e Turnos</h2>
-            <a href="{% url 'minha_home' %}" class="btn btn-back">← Voltar ao Painel</a>
+            <div class="title-group">
+                <h2>💰 Controle de Caixa e Turnos</h2>
+                <button id="btn-themeToggle" class="btn-theme">
+                    <span id="theme-icon">☀️</span> <span id="theme-text" style="display:none;">Modo Claro</span>
+                </button>
+            </div>
+            
+            <div class="nav-actions">
+                <a href="{% url 'minha_home' %}" class="btn btn-back">← Voltar ao Painel</a>
+                <a href="{% url 'historico_recibos' %}" class="btn btn-info text-white">
+                    <i class="fas fa-history"></i> Histórico de Recibos
+                </a>
+            </div>
         </div>
 
         {% if messages %}
@@ -92,6 +154,7 @@
                         <div class="stat-label">Total Esperado em Caixa</div>
                         <div class="stat-value">R$ {{ total_geral_caixa|floatformat:2 }}</div>
                     </div>
+                </div>
 
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 25px 0;">
 
@@ -114,7 +177,7 @@
                     <tr>
                         <th>Produto</th>
                         <th>Qtd</th>
-                        <th>Subtotal</th>
+                        <th>Subtotal / Preço Unitário</th>
                         <th>Hora</th>
                     </tr>
                 </thead>
@@ -123,7 +186,7 @@
                     <tr>
                         <td><strong>{{ v.nome_produto }}</strong></td>
                         <td>{{ v.quantidade }} un.</td>
-                        <td style="color: var(--success); font-weight: bold;">R$ {{ v.lucro_obtido|floatformat:2 }} / R$ {{ v.preco_venda_unitario|floatformat:2 }}</td> <!-- Ajuste se preferir exibir o preço total da venda -->
+                        <td style="color: var(--success); font-weight: bold;">R$ {{ v.lucro_obtido|floatformat:2 }} / R$ {{ v.preco_venda_unitario|floatformat:2 }}</td>
                         <td style="color: var(--text-muted); font-size: 13px;">{{ v.data_venda|date:"H:i" }}</td>
                     </tr>
                     {% empty %}
@@ -135,5 +198,35 @@
             </table>
         {% endif %}
     </div>
+
+    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+    </script>
 </body>
 </html>

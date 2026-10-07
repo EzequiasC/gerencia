@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Gerenciamento de Usuários - Futuristic Stock</title>
@@ -9,12 +9,66 @@
             --bg-dark: #0f172a; --bg-card: #1e293b;
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 30px; background-color: var(--bg-dark); color: var(--text-main); }
-        .container { max-width: 1000px; margin: 0 auto; background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 30px; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            transition: background-color 0.3s, color 0.3s;
+        }
         
-        .header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: var(--bg-card); 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .header-nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 25px; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 15px; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
+
+        .title-group { display: flex; align-items: center; gap: 15px; }
         .header-nav h2 { margin: 0; font-size: 22px; }
         
+        /* Botão do Tema */
+        .btn-theme { 
+            background: transparent; 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: 0.2s; 
+        }
+        .btn-theme:hover { background: var(--border); }
+
         .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; border: none; transition: 0.2s; display: inline-block; }
         .btn-success { background: var(--success); color: white; }
         .btn-success:hover { background: #16a34a; }
@@ -32,15 +86,20 @@
         th { color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
         
         .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
-        .badge-green { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
-        .badge-red { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .badge-purple { background: rgba(73, 119, 223, 0.15); color: #93c5fd; border: 1px solid rgba(73, 119, 223, 0.3); }
+        .badge-green { background: rgba(34, 197, 94, 0.15); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-purple { background: rgba(73, 119, 223, 0.15); color: var(--primary); border: 1px solid rgba(73, 119, 223, 0.3); }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header-nav">
-            <h2>👥 Gerenciamento de Usuários e Aprovações</h2>
+            <div class="title-group">
+                <h2>👥 Gerenciamento de Usuários e Aprovações</h2>
+                <button id="btn-themeToggle" class="btn-theme">
+                    <span id="theme-icon">☀️</span>
+                </button>
+            </div>
             <a href="{% url 'minha_home' %}" class="btn btn-back">← Voltar ao Painel</a>
         </div>
 
@@ -74,7 +133,7 @@
                         {% if u.is_staff %}
                             <span class="badge badge-purple">Administrador</span>
                         {% else %}
-                            <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">Operador</span>
+                            <span class="badge" style="background: rgba(100, 116, 139, 0.1); color: var(--text-muted);">Operador</span>
                         {% endif %}
                     </td>
                     <td>
@@ -104,5 +163,35 @@
             </tbody>
         </table>
     </div>
+
+    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+    </script>
 </body>
 </html>

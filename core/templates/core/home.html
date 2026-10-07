@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,17 +11,29 @@
             --danger: #f87171; --warning: #fbbf24;
             --texto: #f1f2f7; --muted: #b4b8c6;
             --borda: rgba(255, 255, 255, 0.1);
+            --bg-body-dark: linear-gradient(135deg, #070716, #2a1a45 55%, #05050c);
+            --bg-card-dark: rgba(255, 255, 255, 0.04);
         }
 
         * { box-sizing: border-box; }
 
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --texto: #0f172a;
+            --muted: #64748b;
+            --borda: #cbd5e1;
+            --bg-body-dark: #f1f5f9;
+            --bg-card-dark: #ffffff;
+        }
+
         body {
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #070716, #2a1a45 55%, #05050c);
+            background: var(--bg-body-dark);
             background-attachment: fixed;
             color: var(--texto);
             min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
         }
 
         a:focus-visible, button:focus-visible, input:focus-visible {
@@ -35,10 +47,11 @@
         }
 
         .glass-panel {
-            background: rgba(255, 255, 255, 0.04);
+            background: var(--bg-card-dark);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid var(--borda);
+            transition: background 0.3s, border-color 0.3s;
         }
 
         .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
@@ -56,6 +69,22 @@
         .user-greeting b { color: var(--texto); }
         .form-sair { margin: 0; }
 
+        /* Botão de Tema */
+        .btn-theme { 
+            background: transparent; 
+            border: 1px solid var(--borda); 
+            color: var(--texto); 
+            padding: 8px 12px; 
+            border-radius: 30px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: 0.2s; 
+        }
+        .btn-theme:hover { background: rgba(255, 255, 255, 0.08); }
+
         /* Botões */
         .btn {
             display: inline-flex; align-items: center; justify-content: center;
@@ -66,12 +95,12 @@
             transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
         }
         .btn:hover { transform: translateY(-2px); }
-        .btn-primary { background: var(--c5); border-color: var(--c5); }
+        .btn-primary { background: var(--c5); border-color: var(--c5); color: white; }
         .btn-primary:hover { background: #5b87e8; box-shadow: 0 6px 16px rgba(73, 119, 223, 0.3); }
         .btn-success { background: var(--c4); border-color: var(--c4); color: var(--c1); font-weight: 700; }
         .btn-success:hover { background: #95e077; box-shadow: 0 6px 16px rgba(129, 212, 98, 0.25); }
-        .btn-outline { border-color: var(--c5); }
-        .btn-outline:hover { background: rgba(73, 119, 223, 0.3); }
+        .btn-outline { border-color: var(--c5); color: var(--texto); }
+        .btn-outline:hover { background: rgba(73, 119, 223, 0.15); }
         .btn-ghost { color: var(--muted); }
         .btn-ghost:hover { color: var(--texto); background: rgba(255, 255, 255, 0.08); }
 
@@ -95,10 +124,10 @@
         .search-box { display: flex; gap: 10px; flex: 1; min-width: 260px; max-width: 520px; }
         .search-box input {
             flex: 1; min-width: 0; padding: 11px 18px; border-radius: 30px;
-            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--borda);
+            background: var(--bg-card-dark); border: 1px solid var(--borda);
             color: var(--texto); font-size: 14px; font-family: inherit;
         }
-        .search-box input::placeholder { color: #9094a6; }
+        .search-box input::placeholder { color: var(--muted); }
         .search-box input:focus { border-color: var(--c5); }
         .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
@@ -108,10 +137,10 @@
             display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr; gap: 15px; padding: 16px 24px;
         }
         .is-staff-false .list-header, .is-staff-false .list-item { grid-template-columns: 2fr 1fr 1.5fr; }
-        .list-header { font-size: 13px; font-weight: 600; color: var(--muted); background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--borda); }
+        .list-header { font-size: 13px; font-weight: 600; color: var(--muted); background: rgba(100, 116, 139, 0.05); border-bottom: 1px solid var(--borda); }
         .list-item { align-items: center; border-bottom: 1px solid var(--borda); transition: background 0.2s; }
         .list-item:last-child { border-bottom: none; }
-        .list-item:hover { background: rgba(255, 255, 255, 0.03); }
+        .list-item:hover { background: rgba(100, 116, 139, 0.03); }
         .col-acoes-titulo { text-align: right; }
 
         .prod-name { font-size: 16px; font-weight: 600; display: block; margin-bottom: 4px; }
@@ -125,8 +154,8 @@
         .vazio { padding: 40px; text-align: center; color: var(--muted); }
 
         .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid; }
-        .badge-green { background: rgba(129, 212, 98, 0.12); color: #a6e68e; border-color: rgba(129, 212, 98, 0.35); }
-        .badge-yellow { background: rgba(251, 191, 36, 0.12); color: var(--warning); border-color: rgba(251, 191, 36, 0.35); }
+        .badge-green { background: rgba(129, 212, 98, 0.12); color: #15803d; border-color: rgba(129, 212, 98, 0.35); }
+        .badge-yellow { background: rgba(251, 191, 36, 0.12); color: #b45309; border-color: rgba(251, 191, 36, 0.35); }
         .badge-red { background: rgba(248, 113, 113, 0.12); color: var(--danger); border-color: rgba(248, 113, 113, 0.35); }
 
         /* Paginação */
@@ -159,6 +188,11 @@
             <p>Controle de estoque e vendas</p>
         </div>
         <div class="user-actions">
+            <!-- BOTÃO DE TEMA -->
+            <button id="btn-themeToggle" class="btn-theme">
+                <span id="theme-icon">☀️</span> <span id="theme-text">Modo Claro</span>
+            </button>
+
             <span class="user-greeting">Olá, <b>{{ request.user.username }}</b></span>
             {% if request.user.is_staff %}
                 <a href="{% url 'relatorios' %}" class="btn btn-outline">Relatórios</a>
@@ -194,14 +228,14 @@
     </div>
     {% endif %}
 
-<div class="toolbar">
+    <div class="toolbar">
         <form method="get" class="search-box" role="search" style="display: flex; gap: 10px; flex-wrap: wrap; max-width: 700px;">
             <input type="text" name="busca" value="{{ termo_busca }}" placeholder="Buscar por nome do produto..." aria-label="Buscar produto" style="flex: 1; min-width: 200px;">
             
-            <select name="categoria" style="padding: 11px 14px; border-radius: 30px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--borda); color: var(--texto); font-size: 14px; font-family: inherit; outline: none;">
-                <option value="" style="background: #0f172a; color: white;">Todas as categorias</option>
+            <select name="categoria" style="padding: 11px 14px; border-radius: 30px; background: var(--bg-card-dark); border: 1px solid var(--borda); color: var(--texto); font-size: 14px; font-family: inherit; outline: none;">
+                <option value="">Todas as categorias</option>
                 {% for key, val in categorias %}
-                    <option value="{{ key }}" {% if categoria_filtro == key %}selected{% endif %} style="background: #0f172a; color: white;">{{ val }}</option>
+                    <option value="{{ key }}" {% if categoria_filtro == key %}selected{% endif %}>{{ val }}</option>
                 {% endfor %}
             </select>
 
@@ -262,7 +296,7 @@
 
                     <form action="{% url 'adicionar_ao_carrinho' p.id %}" method="POST" style="display: flex; gap: 6px; align-items: center; margin: 0;">
                         {% csrf_token %}
-                        <input type="number" name="quantidade" value="1" min="1" max="{{ p.quantidade_estoque }}" style="width: 55px; padding: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--borda); color: white; border-radius: 6px; text-align: center;">
+                        <input type="number" name="quantidade" value="1" min="1" max="{{ p.quantidade_estoque }}" style="width: 55px; padding: 6px; background: var(--bg-card-dark); border: 1px solid var(--borda); color: var(--texto); border-radius: 6px; text-align: center;">
                         <button type="submit" class="btn btn-success" style="padding: 6px 12px; font-size: 13px;">🛒 Adicionar</button>
                     </form>
                 </div>
@@ -327,6 +361,37 @@
         window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(function () { ajustar(); if (reduzir) desenhar(); }, 150); });
         ajustar(); desenhar();
     })();
+    
+    // SCRIPT DE TEMA CLARO/ESCURO
+    const btnTheme = document.getElementById('btn-themeToggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const themeText = document.getElementById('theme-text');
+    const htmlElement = document.documentElement;
+
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    if(btnTheme) updateButtonUI(savedTheme);
+
+    if(btnTheme) {
+        btnTheme.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateButtonUI(newTheme);
+        });
+    }
+
+    function updateButtonUI(theme) {
+        if (theme === 'dark') {
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Modo Claro';
+        } else {
+            themeIcon.textContent = '🌙';
+            themeText.textContent = 'Modo Escuro';
+        }
+    }
 </script>
 </body>
 </html>

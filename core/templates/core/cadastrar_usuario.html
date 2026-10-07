@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Novo Utilizador - Futuristic Stock</title>
@@ -8,17 +8,73 @@
             --primary: #4977DF; --bg-dark: #0f172a; --bg-card: #1e293b;
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .form-container { background: var(--bg-card); padding: 35px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 450px; }
+
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .form-container { 
+            background: var(--bg-card); 
+            padding: 35px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            width: 100%; 
+            max-width: 450px; 
+            position: relative;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
         h2 { margin-top: 0; color: var(--text-main); font-weight: 600; font-size: 22px; margin-bottom: 25px; }
+        
+        /* Botão do Tema */
+        .btn-theme {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .btn-theme:hover { background: var(--border); }
+
         label { display: block; margin-top: 15px; font-weight: 500; font-size: 14px; color: var(--text-muted); }
-        input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin-top: 8px; background-color: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px; box-sizing: border-box; outline: none; transition: 0.2s; }
+        input[type="text"], input[type="password"], input[type="email"] { width: 100%; padding: 12px; margin-top: 8px; background-color: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px; box-sizing: border-box; outline: none; transition: 0.2s; }
         input:focus { border-color: var(--primary); }
+        
         .checkbox-container { display: flex; align-items: center; gap: 10px; margin-top: 25px; background: rgba(73, 119, 223, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(73, 119, 223, 0.3); }
         .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--primary); cursor: pointer; }
         .checkbox-container label { margin: 0; color: var(--text-main); cursor: pointer; }
+        
         .helptext { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; }
         ul.errorlist { color: #f87171; font-size: 13px; padding-left: 15px; margin: 5px 0; }
+        
         .btn-container { display: flex; gap: 15px; margin-top: 30px; }
         .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; transition: 0.2s; }
         .btn-confirm { background: var(--primary); color: white; }
@@ -29,6 +85,12 @@
 </head>
 <body>
     <div class="form-container">
+        
+        <!-- Botão Sol/Lua -->
+        <button id="btn-themeToggle" class="btn-theme">
+            <span id="theme-icon">☀️</span>
+        </button>
+
         <h2>👥 Adicionar Novo Utilizador</h2>
         <form method="POST">
             {% csrf_token %}
@@ -46,5 +108,35 @@
             </div>
         </form>
     </div>
+
+    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+    </script>
 </body>
 </html>

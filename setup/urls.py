@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from django.conf import settings
 from core.views import (
     landing_page, minha_home, adicionar_produto, 
-    editar_produto, realizar_venda, relatorios, fazer_login, fazer_logout,cadastrar_usuario,exportar_csv,historico_vendas,auto_registro, adicionar_ao_carrinho, ver_carrinho, remover_do_carrinho, finalizar_venda_carrinho,comprovante_venda,cancelar_venda,gerenciar_caixa,gerenciar_usuarios,alternar_status_usuario
+    editar_produto, realizar_venda, relatorios, fazer_login, fazer_logout,cadastrar_usuario,exportar_csv,historico_vendas,auto_registro, adicionar_ao_carrinho, ver_carrinho, remover_do_carrinho, finalizar_venda_carrinho,comprovante_venda,cancelar_venda,gerenciar_caixa,gerenciar_usuarios,alternar_status_usuario,historico_recibos,atualizar_quantidade_carrinho
 )
 
 urlpatterns = [
@@ -30,6 +30,8 @@ urlpatterns = [
     path('caixa/', gerenciar_caixa, name='gerenciar_caixa'),
     path('usuarios/', gerenciar_usuarios, name='gerenciar_usuarios'),
     path('usuarios/toggle/<int:user_id>/', alternar_status_usuario, name='alternar_status_usuario'),
+    path('carrinho/atualizar/<int:produto_id>/<str:acao>/', atualizar_quantidade_carrinho, name='atualizar_carrinho'),
+    path('recibos/', historico_recibos, name='historico_recibos'),
 ]
 
 if settings.DEBUG:

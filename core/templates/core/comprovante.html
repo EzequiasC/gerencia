@@ -1,36 +1,114 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Comprovante de Venda - Futuristic Stock</title>
     <style>
-        body { font-family: 'Courier New', Courier, monospace; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .receipt { background: #ffffff; color: #1e293b; width: 100%; max-width: 400px; padding: 25px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .header { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 15px; margin-bottom: 15px; }
-        .header h2 { margin: 0; font-size: 20px; color: #0f172a; }
-        .header p { margin: 4px 0; font-size: 12px; color: #64748b; }
-        .info { font-size: 12px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
-        .info div { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
-        th, td { padding: 6px 0; text-align: left; border-bottom: 1px solid #f1f5f9; }
-        th { color: #64748b; font-size: 11px; text-transform: uppercase; }
-        .text-right { text-align: right; }
-        .total-section { border-top: 2px dashed #cbd5e1; padding-top: 10px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 20px; color: #0f172a; }
-        .btn-container { display: flex; gap: 10px; }
-        .btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; }
-        .btn-print { background: #2563eb; color: white; }
-        .btn-print:hover { background: #1d4ed8; }
-        .btn-back { background: #e2e8f0; color: #475569; }
-        .btn-back:hover { background: #cbd5e1; }
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --primary: #2563eb;
+        }
 
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--bg-dark); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .receipt { 
+            background: var(--bg-card); 
+            color: var(--text-main); 
+            width: 100%; 
+            max-width: 400px; 
+            padding: 25px; 
+            border-radius: 8px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        /* Botão de Tema */
+        .theme-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .btn-theme {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .btn-theme:hover { background: var(--border); }
+
+        .header { text-align: center; border-bottom: 2px dashed var(--border); padding-bottom: 15px; margin-bottom: 15px; }
+        .header h2 { margin: 0; font-size: 20px; color: var(--text-main); }
+        .header p { margin: 4px 0; font-size: 12px; color: var(--text-muted); }
+        
+        .info { font-size: 12px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .info div { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
+        th, td { padding: 6px 0; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+        .text-right { text-align: right; }
+        
+        .total-section { border-top: 2px dashed var(--border); padding-top: 10px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 20px; color: var(--text-main); }
+        
+        .btn-container { display: flex; gap: 10px; margin-top: 15px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; transition: 0.2s; }
+        .btn-print { background: var(--primary); color: white; }
+        .btn-print:hover { background: #1d4ed8; }
+        .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-back:hover { background: var(--bg-dark); color: var(--text-main); }
+
+        /* REGRAS PARA IMPRESSORA (Força branco e preto no papel) */
         @media print {
-            body { background: white; padding: 0; }
-            .receipt { box-shadow: none; max-width: 100%; padding: 0; }
-            .no-print { display: none; }
+            body { background: white !important; color: black !important; padding: 0; }
+            .receipt { background: white !important; color: black !important; box-shadow: none; max-width: 100%; padding: 0; border: none; }
+            .header h2, .header p, th, td, .total-section, .info { color: black !important; border-color: #ccc !important; }
+            .no-print { display: none !important; }
         }
     </style>
 </head>
 <body>
+    
+    <!-- Container do Botão de Tema (Oculto na impressão) -->
+    <div class="theme-container no-print">
+        <button id="btn-themeToggle" class="btn-theme">
+            <span id="theme-icon">☀️</span> <span id="theme-text" style="display:none;">Modo Claro</span>
+        </button>
+    </div>
+
     <div class="receipt">
         <div class="header">
             <h2>FUTURISTIC STOCK</h2>
@@ -53,7 +131,7 @@
             <tbody>
                 {% for item in recibo.itens %}
                 <tr>
-                    <td>{{ item.nome }}<br><small style="color: #64748b;">R$ {{ item.preco_unitario|floatformat:2 }} un.</small></td>
+                    <td>{{ item.nome }}<br><small style="color: var(--text-muted);">R$ {{ item.preco_unitario|floatformat:2 }} un.</small></td>
                     <td class="text-right">{{ item.quantidade }}</td>
                     <td class="text-right">R$ {{ item.subtotal|floatformat:2 }}</td>
                 </tr>
@@ -71,5 +149,35 @@
             <a href="{% url 'minha_home' %}" class="btn btn-back">Concluir</a>
         </div>
     </div>
+
+    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+    </script>
 </body>
 </html>

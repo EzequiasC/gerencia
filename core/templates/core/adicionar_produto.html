@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Gerenciar Produto - Futuristic Stock</title>
@@ -14,6 +14,14 @@
             --border: #334155;
         }
 
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; 
@@ -24,6 +32,7 @@
             align-items: center; 
             min-height: 100vh; 
             padding: 20px; 
+            transition: background-color 0.3s, color 0.3s;
         }
         
         .form-container { 
@@ -34,15 +43,38 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
             width: 100%; 
             max-width: 500px; 
+            transition: background-color 0.3s, border-color 0.3s;
         }
         
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
         h2 { 
-            margin-top: 0; 
+            margin: 0; 
             color: var(--text-main); 
             font-weight: 600; 
             font-size: 22px; 
-            margin-bottom: 25px; 
         }
+
+        /* Estilo do botão de tema */
+        .btn-theme { 
+            background: transparent; 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 8px; 
+            transition: 0.2s; 
+        }
+        .btn-theme:hover { background: var(--border); }
         
         /* Estilização nativa dos campos gerados pelo Django (form.as_p) */
         label { 
@@ -98,6 +130,7 @@
         
         .btn-confirm:hover { 
             background: #16a34a; 
+            color: white;
         }
         
         .btn-cancel { 
@@ -114,11 +147,18 @@
 </head>
 <body>
     <div class="form-container">
-        <h2>📦 Gestão de Produto</h2>
+        
+        <div class="header-top">
+            <h2>📦 Gestão de Produto</h2>
+            <button id="btn-themeToggle" class="btn-theme">
+                <span id="theme-icon">☀️</span> <span id="theme-text">Modo Claro</span>
+            </button>
+        </div>
+
         <form method="POST">
             {% csrf_token %}
             
-            <!-- Renderiza os campos do formulário do Django com as classes adaptadas -->
+            <!-- Renderiza os campos do formulário do Django -->
             {{ form.as_p }}
             
             <div class="btn-container">
@@ -127,5 +167,38 @@
             </div>
         </form>
     </div>
+
+    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Modo Claro';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Modo Escuro';
+            }
+        }
+    </script>
 </body>
 </html>

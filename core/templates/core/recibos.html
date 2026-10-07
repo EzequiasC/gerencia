@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Histórico de Recibos - Futuristic Stock</title>
+    <style>
+        :root {
+            --primary: #4977DF; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
+            --bg-dark: #0f172a; --bg-card: #1e293b;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
+        }
+
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 30px; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: var(--bg-card); 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .header-nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 25px; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 15px; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
+
+        .title-group { display: flex; align-items: center; gap: 15px; }
+        .header-nav h2 { margin: 0; font-size: 22px; }
+        
+        /* Botão do Tema */
+        .btn-theme { 
+            background: transparent; 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: 0.2s; 
+        }
+        .btn-theme:hover { background: var(--border); }
+
+        .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; border: none; transition: 0.2s; display: inline-block; }
+        .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-back:hover { background: var(--bg-dark); color: var(--text-main); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
+        
+        .box-info { 
+            background: rgba(100, 116, 139, 0.04); 
+            padding: 20px; 
+            border-radius: 8px; 
+            border: 1px solid var(--border); 
+            margin-bottom: 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-nav">
+            <div class="title-group">
+                <h2>🧾 Histórico de Recibos (Últimos 7 Dias)</h2>
+                <button id="btn-themeToggle" class="btn-theme">
+                    <span id="theme-icon">☀️</span>
+                </button>
+            </div>
+            
+            <!-- Link para voltar direto para o Caixa -->
+            <a href="{% url 'gerenciar_caixa' %}" class="btn btn-back">← Voltar ao Caixa</a>
+        </div>
+
+        <div class="box-info" style="border-left: 4px solid var(--primary);">
+            <div>
+                <h3 style="margin: 0; color: var(--text-main);">Resumo da Semana</h3>
+                <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 14px;">Total faturado nos últimos 7 dias corridos.</p>
+            </div>
+            <h2 style="margin: 0; color: var(--success);">R$ {{ total_semana|floatformat:2 }}</h2>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Data e Hora</th>
+                    <th>Produto / Item</th>
+                    <th>Qtd.</th>
+                    <th>Valor Unitário</th>
+                    <th>Total do Item</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recibo in recibos %}
+                <tr>
+                    <td style="color: var(--text-muted); font-size: 13px;">{{ recibo.data_venda|date:"d/m/Y H:i" }}</td>
+                    <td><strong>{{ recibo.nome_produto }}</strong></td>
+                    <td>{{ recibo.quantidade }} un.</td>
+                    <td>R$ {{ recibo.preco_venda_unitario|floatformat:2 }}</td>
+                    <td style="color: var(--success); font-weight: bold;">
+                        R$ {% widthratio recibo.preco_venda_unitario 1 recibo.quantidade %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                        Nenhuma venda registrada nos últimos 7 dias.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +12,20 @@
             --c3: #271DC7;
             --c4: #81D462;
             --c5: #4977DF;
+            --bg-body: linear-gradient(135deg, #070716, #2a1a45 55%, #05050c);
+            --text-main: #ffffff;
+            --text-muted: #d1d5db;
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --bg-glass: rgba(255, 255, 255, 0.04);
+        }
+
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --bg-body: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-glass: #cbd5e1;
+            --bg-glass: #ffffff;
         }
 
         * { box-sizing: border-box; }
@@ -19,13 +33,14 @@
         body {
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #070716, #2a1a45 55%, #05050c);
+            background: var(--bg-body);
             background-attachment: fixed;
-            color: #ffffff;
+            color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
+            transition: background 0.3s, color 0.3s;
         }
 
         a:focus-visible {
@@ -42,12 +57,13 @@
             pointer-events: none;
         }
 
-        /* Vidro fosco, mais discreto */
+        /* Vidro fosco */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.04);
+            background: var(--bg-glass);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-glass);
+            transition: background 0.3s, border-color 0.3s;
         }
 
         header {
@@ -55,7 +71,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 18px clamp(20px, 5vw, 50px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid var(--border-glass);
         }
 
         .logo {
@@ -66,6 +82,28 @@
             text-decoration: none;
         }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Botão de Tema */
+        .btn-theme { 
+            background: transparent; 
+            border: 1px solid var(--border-glass); 
+            color: var(--text-main); 
+            padding: 8px 14px; 
+            border-radius: 30px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: 0.2s; 
+        }
+        .btn-theme:hover { background: rgba(100, 100, 100, 0.1); }
+
         .btn-entrar {
             display: inline-block;
             text-decoration: none;
@@ -73,17 +111,13 @@
             border-radius: 30px;
             font-weight: 600;
             font-size: 16px;
-            color: #ffffff;
+            color: var(--text-main);
             border: 1.5px solid var(--c5);
-            transition: background 0.25s ease, border-color 0.25s ease;
-        }
-
-        .btn-entrar {
             transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
         }
 
         .btn-entrar:hover {
-            background: rgba(73, 119, 223, 0.35);
+            background: rgba(73, 119, 223, 0.25);
             transform: translateY(-3px);
             box-shadow: 0 6px 18px rgba(73, 119, 223, 0.3);
         }
@@ -121,7 +155,7 @@
             margin: 0 0 20px;
             line-height: 1.1;
             letter-spacing: -0.5px;
-            background: linear-gradient(90deg, #ffffff 40%, #b9e8a6);
+            background: linear-gradient(90deg, var(--text-main) 40%, #81d462);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -129,12 +163,12 @@
 
         .text-section p {
             font-size: 18px;
-            color: #d1d5db;
+            color: var(--text-muted);
             line-height: 1.6;
             margin: 0 0 32px;
         }
 
-        /* Lata: inclina com o mouse e gira sozinha */
+        /* Lata */
         .parallax-wrapper { perspective: 1000px; }
 
         .image-section {
@@ -160,7 +194,6 @@
             filter: drop-shadow(0 18px 24px rgba(73, 119, 223, 0.35));
         }
 
-        /* Segunda imagem nas costas, para o verso não ficar espelhado */
         .giro .verso {
             position: absolute;
             inset: 0;
@@ -178,7 +211,7 @@
         .shadow-floor {
             width: 200px;
             height: 18px;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.3);
             border-radius: 50%;
             margin: 28px auto 0;
             filter: blur(8px);
@@ -217,7 +250,7 @@
 
         .feature-card p {
             margin: 0;
-            color: #c4c7d0;
+            color: var(--text-muted);
             font-size: 15px;
             line-height: 1.5;
         }
@@ -235,7 +268,13 @@
 
     <header class="glass-panel">
         <a class="logo" href="/">FUTURISTIC STOCK</a>
-        <a href="{% url 'login' %}" class="btn-entrar">Entrar no sistema</a>
+        <div class="header-actions">
+            <!-- BOTÃO DE TEMA -->
+            <button id="btn-themeToggle" class="btn-theme">
+                <span id="theme-icon">☀️</span> <span id="theme-text">Modo Claro</span>
+            </button>
+            <a href="{% url 'login' %}" class="btn-entrar">Entrar no sistema</a>
+        </div>
     </header>
 
     <main class="main-container">
@@ -344,6 +383,37 @@
             criar();
             desenhar();
         })();
+
+        // SCRIPT DE TEMA CLARO/ESCURO
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Modo Claro';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Modo Escuro';
+            }
+        }
     </script>
 </body>
 </html>

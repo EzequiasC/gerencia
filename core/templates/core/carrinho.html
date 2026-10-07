@@ -1,16 +1,35 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Carrinho de Compras - Futuristic Stock</title>
     <style>
+        /* TEMA ESCURO (Padrão) */
         :root {
-            --primary: #4977DF; --success: #22c55e; --danger: #ef4444; --bg-dark: #0f172a; --bg-card: #1e293b;
+            --primary: #4977DF; --success: #22c55e; --danger: #ef4444; 
+            --bg-dark: #0f172a; --bg-card: #1e293b;
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-dark); color: var(--text-main); padding: 30px; }
-        .container { max-width: 800px; margin: 0 auto; background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        h2 { margin-top: 0; color: var(--text-main); font-weight: 600; font-size: 24px; margin-bottom: 20px; }
+
+        /* TEMA CLARO (Ativado pelo botão) */
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9; /* Fundo cinza bem claro */
+            --bg-card: #ffffff; /* Cartão branco */
+            --text-main: #0f172a; /* Texto escuro */
+            --text-muted: #64748b; /* Texto secundário acinzentado */
+            --border: #cbd5e1; /* Borda suave */
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-dark); color: var(--text-main); padding: 30px; transition: background-color 0.3s, color 0.3s; }
+        .container { max-width: 800px; margin: 0 auto; background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.1); transition: background-color 0.3s, border-color 0.3s; }
+        
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h2 { margin: 0; color: var(--text-main); font-weight: 600; font-size: 24px; }
+        
+        /* Estilo do Botão de Tema */
+        .btn-theme { background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-theme:hover { background: var(--border); }
+
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
         th { color: var(--text-muted); font-weight: 600; }
@@ -28,7 +47,14 @@
 </head>
 <body>
     <div class="container">
-        <h2>🛒 Carrinho de Compras</h2>
+        
+        <!-- Cabeçalho com o Título e o Botão de Tema -->
+        <div class="header-top">
+            <h2>🛒 Carrinho de Compras</h2>
+            <button id="btn-themeToggle" class="btn-theme">
+                <span id="theme-icon">☀️</span> <span id="theme-text">Modo Claro</span>
+            </button>
+        </div>
         
         {% if itens %}
             <table>
@@ -46,13 +72,20 @@
                     <tr>
                         <td><strong>{{ item.produto.name }}</strong></td>
                         <td>R$ {{ item.produto.preco|floatformat:2 }}</td>
-                        <td>{{ item.quantidade }}</td>
+                        
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <a href="{% url 'atualizar_carrinho' item.produto.id 'diminuir' %}" class="btn btn-sm btn-danger" style="padding: 2px 10px; font-weight: bold; border-radius: 4px; text-decoration: none;">-</a>
+                                <span style="font-weight: bold; font-size: 16px;">{{ item.quantidade }}</span>
+                                <a href="{% url 'atualizar_carrinho' item.produto.id 'aumentar' %}" class="btn btn-sm btn-success" style="padding: 2px 8px; font-weight: bold; border-radius: 4px; text-decoration: none;">+</a>
+                            </div>
+                        </td>
+
                         <td><strong>R$ {{ item.subtotal|floatformat:2 }}</strong></td>
                         <td>
-                            <!-- Formulário POST seguro para remover o item -->
                             <form action="{% url 'remover_do_carrinho' item.produto.id %}" method="POST" style="margin: 0;">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-danger">Remover</button>
+                                <button type="submit" class="btn btn-danger" style="padding: 6px 12px;">X</button>
                             </form>
                         </td>
                     </tr>
@@ -67,13 +100,12 @@
 
             <div class="btn-container">
                 <a href="{% url 'minha_home' %}" class="btn btn-back">Continuar comprando</a>
-                
-                <!-- Formulário POST seguro para finalizar a venda -->
                 <form action="{% url 'finalizar_venda_carrinho' %}" method="POST" style="flex: 1; margin: 0;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-confirm" style="width: 100%;">Finalizar Venda</button>
                 </form>
             </div>
+            
         {% else %}
             <div class="empty">Seu carrinho está vazio.</div>
             <div style="text-align: center; margin-top: 20px;">
@@ -81,5 +113,41 @@
             </div>
         {% endif %}
     </div>
+
+    <!-- SCRIPT DE TROCA DE TEMA -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const htmlElement = document.documentElement;
+
+        // 1. Verifica se já existe uma preferência salva no navegador
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        
+        // 2. Aplica o tema salvo imediatamente ao carregar a página
+        htmlElement.setAttribute('data-theme', savedTheme);
+        updateButtonUI(savedTheme);
+
+        // 3. O que acontece quando clica no botão
+        btnTheme.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme); // Salva a escolha
+            updateButtonUI(newTheme);
+        });
+
+        // Atualiza o texto e ícone do botão
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Modo Claro';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Modo Escuro';
+            }
+        }
+    </script>
 </body>
 </html>

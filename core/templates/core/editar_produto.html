@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Gerenciar Produto - Futuristic Stock</title>
@@ -14,6 +14,15 @@
             --border: #334155;
         }
 
+        /* TEMA CLARO */
+        [data-theme="light"] {
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; 
@@ -24,6 +33,7 @@
             align-items: center; 
             min-height: 100vh; 
             padding: 20px; 
+            transition: background-color 0.3s, color 0.3s;
         }
         
         .form-container { 
@@ -34,6 +44,8 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
             width: 100%; 
             max-width: 500px; 
+            position: relative;
+            transition: background-color 0.3s, border-color 0.3s;
         }
         
         h2 { 
@@ -43,6 +55,25 @@
             font-size: 22px; 
             margin-bottom: 25px; 
         }
+
+        /* Botão do Tema */
+        .btn-theme {
+            position: absolute;
+            top: 30px;
+            right: 35px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .btn-theme:hover { background: var(--border); }
         
         /* Estilização nativa dos campos gerados pelo Django (form.as_p) */
         label { 
@@ -98,6 +129,7 @@
         
         .btn-confirm:hover { 
             background: #16a34a; 
+            color: white;
         }
         
         .btn-cancel { 
@@ -114,11 +146,15 @@
 </head>
 <body>
     <div class="form-container">
+        <!-- Botão Sol/Lua -->
+        <button id="btn-themeToggle" class="btn-theme">
+            <span id="theme-icon">☀️</span>
+        </button>
+
         <h2>📦 Gestão de Produto</h2>
         <form method="POST">
             {% csrf_token %}
             
-            <!-- Renderiza os campos do formulário do Django com as classes adaptadas -->
             {{ form.as_p }}
             
             <div class="btn-container">
@@ -127,5 +163,35 @@
             </div>
         </form>
     </div>
+
+    <!-- SCRIPT DE TEMA CLARO/ESCURO -->
+    <script>
+        const btnTheme = document.getElementById('btn-themeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        if(btnTheme) updateButtonUI(savedTheme);
+
+        if(btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonUI(newTheme);
+            });
+        }
+
+        function updateButtonUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+    </script>
 </body>
 </html>

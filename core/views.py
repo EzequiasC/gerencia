@@ -15,6 +15,7 @@ from django.db.models.functions import ExtractWeekDay
 from core.models import Produto, HistoricoVenda, CaixaTurno
 from core.forms import ProdutoForm, CustomUserCreationForm
 from django.utils import timezone
+from datetime import timedelta
 
 
 def landing_page(request):
@@ -383,6 +384,35 @@ def adicionar_ao_carrinho(request, produto_id):
     messages.success(request, f'"{produto.name}" adicionado ao carrinho!')
     return redirect('minha_home')
 
+@login_required(login_url='login')
+def atualizar_quantidade_carrinho(request, produto_id, acao):
+    produto = get_object_or_404(Produto, id=produto_id)
+    str_id = str(produto_id)
+    
+    # Verifica se o carrinho existe e se o produto está nele
+    if 'cart' in request.session and str_id in request.session['cart']:
+        cart = request.session['cart']
+        qtd_atual = cart[str_id]
+        
+        if acao == 'aumentar':
+            # Verifica se não ultrapassa o estoque antes de aumentar
+            if qtd_atual + 1 > produto.quantidade_estoque:
+                messages.error(request, f'Estoque insuficiente! Máximo disponível: {produto.quantidade_estoque} un.')
+            else:
+                cart[str_id] += 1
+                
+        elif acao == 'diminuir':
+            if qtd_atual > 1:
+                cart[str_id] -= 1
+            else:
+                # Se a quantidade chegar a zero, remove o item do carrinho
+                del cart[str_id]
+                messages.info(request, f'"{produto.name}" removido do carrinho.')
+                
+        # Salva as alterações na sessão
+        request.session.modified = True
+        
+        return redirect('ver_carrinho')
 
 @login_required(login_url='login')
 def ver_carrinho(request):
@@ -539,13 +569,27 @@ def gerenciar_caixa(request):
                     vendas_turno = HistoricoVenda.objects.filter(caixa=caixa_aberto)
                     total_vendas = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_turno)
                     
+                    valor_esperado = float(caixa_aberto.valor_inicial) + total_vendas
+                    
+                    valor_informado = round(valor_informado, 2)
+                    valor_esperado = round(valor_esperado, 2)
+                    
+                    if valor_informado != valor_esperado:
+                        diferenca = valor_informado - valor_esperado
+                        if diferenca > 0:
+                            messages.error(request, f'Erro: O caixa não bate! Estão a sobrar R$ {diferenca:.2f}.')
+                        else:
+                            messages.error(request, f'Erro: O caixa não bate! Estão a faltar R$ {abs(diferenca):.2f}.')
+                        
+                        return redirect('gerenciar_caixa')
+                    
                     caixa_aberto.valor_informado = valor_informado
                     caixa_aberto.total_vendas = total_vendas
                     caixa_aberto.data_fechamento = timezone.now()
                     caixa_aberto.aberto = False
                     caixa_aberto.save()
                     
-                    messages.success(request, 'Caixa fechado com sucesso! Confira o resumo da auditoria abaixo.')
+                    messages.success(request, 'Caixa fechado com sucesso! Os valores estão exatos.')
                 except ValueError:
                     messages.error(request, 'Valor informado inválido.')
             return redirect('gerenciar_caixa')
@@ -595,3 +639,20 @@ def alternar_status_usuario(request, user_id):
     status_txt = "ativado/aprovado" if usuario.is_active else "desativado/bloqueado"
     messages.success(request, f'O usuário "{usuario.username}" foi {status_txt} com sucesso!')
     return redirect('gerenciar_usuarios')
+
+@login_required(login_url='login')
+def historico_recibos(request):
+    sete_dias_atras = timezone.now() - timedelta(days=7)
+    
+
+    recibos = HistoricoVenda.objects.filter(
+        data_venda__gte=sete_dias_atras
+    ).order_by('-data_venda')
+    
+    total_semana = sum(float(r.preco_venda_unitario) * r.quantidade for r in recibos)
+
+    contexto = {
+        'recibos': recibos,
+        'total_semana': total_semana,
+    }
+    return render(request, 'core/recibos.html', contexto)
