@@ -1,6 +1,11 @@
 import csv
+import re
+import uuid
+from decimal import Decimal, InvalidOperation
+from datetime import timedelta
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login as auth_login, logout as auth_logout
@@ -12,18 +17,44 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.db.models import Sum, Count, F
 from django.db.models.functions import ExtractWeekDay
+
 from core.models import Produto, HistoricoVenda, CaixaTurno
 from core.forms import ProdutoForm, CustomUserCreationForm
-from django.utils import timezone
-from datetime import timedelta
 
 
-def landing_page(request):
-    return render(request, 'core/landing.html')
+# ======================================================================
+# UTILITÁRIOS E SEGURANÇA
+# ======================================================================
 
+FORMAS_VALIDAS = {'dinheiro', 'pix', 'debito', 'credito'}
+
+def parse_valor_monetario(texto):
+    """
+    Analisa um valor em texto e retorna um Decimal seguro.
+    Bloqueia entradas maliciosas como notação científica (1e999) ou formatações duplas (20,00,00).
+    """
+    if not texto:
+        return None
+    
+    texto_limpo = str(texto).strip().replace(',', '.')
+    
+    if not re.fullmatch(r'\d+(\.\d{1,2})?', texto_limpo):
+        return None
+        
+    try:
+        valor = Decimal(texto_limpo)
+    except InvalidOperation:
+        return None
+        
+    if valor < 0 or valor > Decimal('100000.00'):
+        return None
+        
+    return valor
 
 def staff_required(view_func):
-    """Decorador personalizado para restringir áreas de admin com mensagem clara."""
+    """
+    Restringe áreas do sistema apenas a administradores (staff).
+    """
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('login')
@@ -33,6 +64,13 @@ def staff_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
+
+# ======================================================================
+# PÁGINAS PÚBLICAS E AUTENTICAÇÃO
+# ======================================================================
+
+def landing_page(request):
+    return render(request, 'core/landing.html')
 
 def fazer_login(request):
     if request.method == 'POST':
@@ -50,11 +88,9 @@ def fazer_login(request):
         form = AuthenticationForm()
     return render(request, 'core/login.html', {'form': form})
 
-
 def fazer_logout(request):
     auth_logout(request)
     return redirect('login')
-
 
 def auto_registro(request):
     if request.method == 'POST':
@@ -74,7 +110,6 @@ def auto_registro(request):
         form = CustomUserCreationForm()
         
     return render(request, 'core/auto_registro.html', {'form': form})
-
 
 @login_required(login_url='login')
 @staff_required
@@ -98,6 +133,10 @@ def cadastrar_usuario(request):
         
     return render(request, 'core/cadastrar_usuario.html', {'form': form})
 
+
+# ======================================================================
+# INVENTÁRIO (PRODUTOS)
+# ======================================================================
 
 @login_required(login_url='login')
 def minha_home(request):
@@ -140,7 +179,6 @@ def minha_home(request):
     }
     return render(request, 'core/home.html', contexto)
 
-
 @login_required(login_url='login')
 @staff_required
 def adicionar_produto(request):
@@ -155,7 +193,6 @@ def adicionar_produto(request):
     
     contexto = {'form': form}
     return render(request, 'core/adicionar_produto.html', contexto)
-
 
 @login_required(login_url='login')
 @staff_required
@@ -175,9 +212,238 @@ def editar_produto(request, produto_id):
     return render(request, 'core/editar_produto.html', contexto)
 
 
+# ======================================================================
+# CARRINHO DE COMPRAS E VENDAS
+# ======================================================================
+
+@login_required(login_url='login')
+@require_POST
+def adicionar_ao_carrinho(request, produto_id):
+    produto = get_object_or_404(Produto, id=produto_id)
+    
+    try:
+        quantidade = int(request.POST.get('quantidade', 1))
+        if quantidade < 1:
+            raise ValueError
+    except ValueError:
+        messages.error(request, 'A quantidade informada é inválida (deve ser maior que zero).')
+        return redirect('minha_home')
+        
+    if quantidade > produto.quantidade_estoque:
+        messages.error(request, f'Estoque insuficiente! Só existem {produto.quantidade_estoque} unidades.')
+        return redirect('minha_home')
+        
+    if 'cart' not in request.session:
+        request.session['cart'] = {}
+        
+    cart = request.session['cart']
+    str_id = str(produto_id)
+    
+    quantidade_atual = cart.get(str_id, 0)
+    nova_quantidade = quantidade_atual + quantidade
+    
+    if nova_quantidade > produto.quantidade_estoque:
+        messages.error(request, 'A quantidade total no carrinho excede o estoque disponível.')
+        return redirect('minha_home')
+        
+    cart[str_id] = nova_quantidade
+    request.session.modified = True
+    
+    messages.success(request, f'"{produto.name}" adicionado ao carrinho!')
+    return redirect('minha_home')
+
+@login_required(login_url='login')
+@require_POST # <-- Prevenção contra alteração via GET
+def atualizar_quantidade_carrinho(request, produto_id, acao):
+    produto = get_object_or_404(Produto, id=produto_id)
+    str_id = str(produto_id)
+    
+    if 'cart' in request.session and str_id in request.session['cart']:
+        cart = request.session['cart']
+        qtd_atual = cart[str_id]
+        
+        if acao == 'aumentar':
+            if qtd_atual + 1 > produto.quantidade_estoque:
+                messages.error(request, f'Estoque insuficiente! Máximo disponível: {produto.quantidade_estoque} un.')
+            else:
+                cart[str_id] += 1
+                
+        elif acao == 'diminuir':
+            if qtd_atual > 1:
+                cart[str_id] -= 1
+            else:
+                del cart[str_id]
+                messages.info(request, f'"{produto.name}" removido do carrinho.')
+                
+        request.session.modified = True
+        
+    return redirect('ver_carrinho')
+
+@login_required(login_url='login')
+def ver_carrinho(request):
+    cart = request.session.get('cart', {})
+    itens_carrinho = []
+    valor_total_carrinho = 0
+    cart_modificado = False
+    
+    for produto_id, quantidade in list(cart.items()):
+        produto = Produto.objects.filter(id=int(produto_id)).first()
+        if not produto:
+            del cart[produto_id]
+            cart_modificado = True
+            continue
+            
+        subtotal = produto.preco * quantidade
+        valor_total_carrinho += subtotal
+        
+        itens_carrinho.append({
+            'produto': produto,
+            'quantidade': quantidade,
+            'subtotal': subtotal
+        })
+        
+    if cart_modificado:
+        request.session.modified = True
+        
+    contexto = {
+        'itens': itens_carrinho,
+        'valor_total_carrinho': valor_total_carrinho
+    }
+    return render(request, 'core/carrinho.html', contexto)
+
+@login_required(login_url='login')
+@require_POST
+def remover_do_carrinho(request, produto_id):
+    cart = request.session.get('cart', {})
+    str_id = str(produto_id)
+    
+    if str_id in cart:
+        del cart[str_id]
+        request.session.modified = True
+        messages.success(request, 'Item removido do carrinho.')
+        
+    return redirect('ver_carrinho')
+
+@login_required(login_url='login')
+@require_POST
+def finalizar_venda_carrinho(request):
+    caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
+    if not caixa_aberto:
+        messages.error(request, 'Você precisa abrir o caixa antes de finalizar vendas.')
+        return redirect('gerenciar_caixa')
+
+    forma_pagamento = request.POST.get('forma_pagamento', '').strip().lower()
+    if forma_pagamento not in FORMAS_VALIDAS:
+        messages.error(request, 'Forma de pagamento inválida.')
+        return redirect('ver_carrinho')
+
+    valor_recebido_str = request.POST.get('valor_recebido', '0')
+    cart = request.session.get('cart', {})
+    
+    if not cart:
+        messages.error(request, 'Seu carrinho está vazio.')
+        return redirect('ver_carrinho')
+        
+    itens_recibo = []
+    valor_total_venda = Decimal('0.00')
+    
+    try:
+        with transaction.atomic():
+            p_ids = []
+            for i in cart.keys():
+                try:
+                    p_ids.append(int(i))
+                except (ValueError, TypeError):
+                    pass
+            
+            produtos = {p.id: p for p in Produto.objects.select_for_update().filter(id__in=p_ids)}
+            
+            for pid_str, qtd in cart.items():
+                try:
+                    pid = int(pid_str)
+                    qtd = int(qtd)
+                except (ValueError, TypeError):
+                    raise ValueError('Quantidade inválida no carrinho.')
+
+                if qtd < 1:
+                    raise ValueError('A quantidade do produto deve ser maior que zero.')
+
+                produto = produtos.get(pid)
+                if produto is None or qtd > produto.quantidade_estoque:
+                    nome = produto.name if produto else 'um item'
+                    raise ValueError(f'Estoque insuficiente para "{nome}". Nenhuma venda foi realizada.')
+                
+                subtotal = produto.preco * Decimal(qtd)
+                valor_total_venda += subtotal
+
+            troco = Decimal('0.00')
+            valor_recebido = Decimal('0.00')
+            if forma_pagamento == 'dinheiro':
+                valor_recebido = parse_valor_monetario(valor_recebido_str)
+                if valor_recebido is None:
+                    raise ValueError('O valor em dinheiro recebido é inválido.')
+                
+                if valor_recebido < valor_total_venda:
+                    raise ValueError('O valor recebido em dinheiro é menor que o total da compra.')
+                
+                troco = valor_recebido - valor_total_venda
+
+            venda_lote_id = uuid.uuid4()
+
+            for pid_str, qtd in cart.items():
+                pid = int(pid_str)
+                qtd = int(qtd)
+                produto = produtos.get(pid)
+                
+                lucro_venda = produto.lucro_unitario * Decimal(qtd)
+                subtotal = produto.preco * Decimal(qtd)
+                
+                HistoricoVenda.objects.create(
+                    venda_uuid=venda_lote_id,
+                    produto=produto,
+                    nome_produto=produto.name,
+                    quantidade=qtd,
+                    preco_venda_unitario=produto.preco,
+                    lucro_obtido=lucro_venda,
+                    usuario=request.user,
+                    caixa=caixa_aberto,
+                    forma_pagamento=forma_pagamento # <--- Associa a forma de pagamento real (Dinheiro, PIX, etc)
+                )
+                
+                itens_recibo.append({
+                    'nome': produto.name,
+                    'quantidade': qtd,
+                    'preco_unitario': float(produto.preco),
+                    'subtotal': float(subtotal)
+                })
+                
+                produto.quantidade_estoque -= qtd
+                produto.save()
+                
+    except ValueError as e:
+        messages.error(request, str(e))
+        return redirect('ver_carrinho')
+        
+    request.session['ultimo_recibo'] = {
+        'itens': itens_recibo,
+        'total': float(valor_total_venda),
+        'forma_pagamento': forma_pagamento.upper(),
+        'valor_recebido': float(valor_recebido) if forma_pagamento == 'dinheiro' else float(valor_total_venda),
+        'troco': float(troco),
+        'operador': request.user.username,
+        'data': str(timezone.now().strftime('%d/%m/%Y %H:%M'))
+    }
+    request.session['cart'] = {}
+    request.session.modified = True
+    
+    return redirect('comprovante_venda')
+
+
 @login_required(login_url='login')
 def realizar_venda(request, produto_id):
-    # Valida se o usuário possui um caixa aberto
+    # <-- 404 imediato bloqueia erro 500 caso o ID seja inválido
+    produto_verificacao = get_object_or_404(Produto, id=produto_id) 
+    
     caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
     if not caixa_aberto:
         messages.error(request, 'Você precisa abrir o caixa antes de realizar vendas.')
@@ -197,15 +463,18 @@ def realizar_venda(request, produto_id):
                     return redirect('realizar_venda', produto_id=produto_id)
                 
                 lucro_venda = produto.lucro_unitario * quantidade
+                venda_lote_id = uuid.uuid4()
                 
                 HistoricoVenda.objects.create(
+                    venda_uuid=venda_lote_id,
                     produto=produto,
                     nome_produto=produto.name,
                     quantidade=quantidade,
                     preco_venda_unitario=produto.preco,
                     lucro_obtido=lucro_venda,
                     usuario=request.user,
-                    caixa=caixa_aberto  # <--- Associa ao turno de caixa ativo
+                    caixa=caixa_aberto,
+                    forma_pagamento='dinheiro' # <-- Assume dinheiro para vendas rápidas sem carrinho
                 )
                 
                 produto.quantidade_estoque -= quantidade
@@ -218,8 +487,100 @@ def realizar_venda(request, produto_id):
             messages.error(request, 'Por favor, digite um número válido.')
             return redirect('realizar_venda', produto_id=produto_id)
             
-    produto = get_object_or_404(Produto, id=produto_id)
-    return render(request, 'core/realizar_venda.html', {'produto': produto})
+    return render(request, 'core/realizar_venda.html', {'produto': produto_verificacao})
+
+
+@login_required(login_url='login')
+def comprovante_venda(request):
+    recibo = request.session.get('ultimo_recibo')
+    if not recibo:
+        messages.error(request, 'Nenhum recibo recente encontrado.')
+        return redirect('minha_home')
+        
+    return render(request, 'core/comprovante.html', {'recibo': recibo})
+
+
+# ======================================================================
+# FLUXO DE CAIXA E HISTÓRICO
+# ======================================================================
+
+@login_required(login_url='login')
+def gerenciar_caixa(request):
+    caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
+    
+    if request.method == 'POST':
+        acao = request.POST.get('acao')
+        
+        if acao == 'abrir':
+            if caixa_aberto:
+                messages.error(request, 'Você já possui um caixa aberto.')
+            else:
+                valor_inicial = parse_valor_monetario(request.POST.get('valor_inicial'))
+                if valor_inicial is None:
+                    messages.error(request, 'Valor inicial inválido. Use um número positivo válido.')
+                else:
+                    CaixaTurno.objects.create(usuario=request.user, valor_inicial=valor_inicial, aberto=True)
+                    messages.success(request, 'Caixa aberto com sucesso! Bom turno de vendas.')
+            return redirect('gerenciar_caixa')
+            
+        elif acao == 'fechar':
+            if not caixa_aberto:
+                messages.error(request, 'Não há nenhum caixa aberto para fechar.')
+            else:
+                valor_informado = parse_valor_monetario(request.POST.get('valor_informado'))
+                if valor_informado is None:
+                    messages.error(request, 'Valor informado inválido.')
+                    return redirect('gerenciar_caixa')
+                    
+                # NOVO: Filtra APENAS DINHEIRO para o cálculo físico de fecho da gaveta
+                vendas_turno_dinheiro = HistoricoVenda.objects.filter(caixa=caixa_aberto, forma_pagamento='dinheiro')
+                total_vendas_dinheiro = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_turno_dinheiro)
+                
+                valor_esperado = float(caixa_aberto.valor_inicial) + total_vendas_dinheiro
+                
+                valor_informado_f = float(valor_informado)
+                valor_esperado_f = round(valor_esperado, 2)
+                
+                if round(valor_informado_f, 2) != valor_esperado_f:
+                    diferenca = valor_informado_f - valor_esperado_f
+                    if diferenca > 0:
+                        messages.error(request, f'Erro: O caixa não bate! Estão a sobrar R$ {diferenca:.2f}.')
+                    else:
+                        messages.error(request, f'Erro: O caixa não bate! Estão a faltar R$ {abs(diferenca):.2f}.')
+                    
+                    return redirect('gerenciar_caixa')
+                
+                caixa_aberto.valor_informado = valor_informado_f
+                
+                # Regista o total global no caixa para efeitos de relatório
+                vendas_turno_todas = HistoricoVenda.objects.filter(caixa=caixa_aberto)
+                total_vendas_todas = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_turno_todas)
+                caixa_aberto.total_vendas = total_vendas_todas
+                
+                caixa_aberto.data_fechamento = timezone.now()
+                caixa_aberto.aberto = False
+                caixa_aberto.save()
+                
+                messages.success(request, 'Caixa fechado com sucesso! Os valores estão exatos.')
+            return redirect('gerenciar_caixa')
+
+    vendas_atuais = []
+    total_parcial = 0
+    total_geral_caixa = 0
+    
+    if caixa_aberto:
+        vendas_atuais = HistoricoVenda.objects.filter(caixa=caixa_aberto).order_by('-data_venda')
+        # Mostramos à direita apenas o que esperamos em dinheiro (total da gaveta + parcial)
+        total_parcial = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_atuais.filter(forma_pagamento='dinheiro'))
+        total_geral_caixa = float(caixa_aberto.valor_inicial) + total_parcial
+
+    contexto = {
+        'caixa_aberto': caixa_aberto,
+        'vendas_atuais': vendas_atuais,
+        'total_parcial': total_parcial,
+        'total_geral_caixa': total_geral_caixa,
+    }
+    return render(request, 'core/caixa.html', contexto)
 
 
 @login_required(login_url='login')
@@ -291,6 +652,55 @@ def cancelar_venda(request, venda_id):
         
     return redirect('historico_vendas')
 
+@login_required(login_url='login')
+def historico_recibos(request):
+    sete_dias_atras = timezone.now() - timedelta(days=7)
+    
+    recibos = HistoricoVenda.objects.filter(
+        data_venda__gte=sete_dias_atras
+    ).order_by('-data_venda')
+    
+    total_semana = sum(float(r.preco_venda_unitario) * r.quantidade for r in recibos)
+
+    contexto = {
+        'recibos': recibos,
+        'total_semana': total_semana,
+    }
+    return render(request, 'core/recibos.html', contexto)
+
+
+# ======================================================================
+# GESTÃO EXECUTIVA (RELATÓRIOS E UTILIZADORES)
+# ======================================================================
+
+@login_required(login_url='login')
+def gerenciar_usuarios(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Acesso restrito a administradores.')
+        return redirect('minha_home')
+        
+    usuarios = User.objects.all().order_by('-date_joined')
+    return render(request, 'core/usuarios.html', {'usuarios': usuarios})
+
+@login_required(login_url='login')
+@require_POST
+def alternar_status_usuario(request, user_id):
+    if not request.user.is_staff:
+        messages.error(request, 'Acesso restrito a administradores.')
+        return redirect('minha_home')
+        
+    usuario = get_object_or_404(User, id=user_id)
+    
+    if usuario == request.user:
+        messages.error(request, 'Você não pode alterar o status da sua própria conta.')
+        return redirect('gerenciar_usuarios')
+        
+    usuario.is_active = not usuario.is_active
+    usuario.save()
+    
+    status_txt = "ativado/aprovado" if usuario.is_active else "desativado/bloqueado"
+    messages.success(request, f'O usuário "{usuario.username}" foi {status_txt} com sucesso!')
+    return redirect('gerenciar_usuarios')
 
 @login_required(login_url='login')
 @staff_required
@@ -331,7 +741,6 @@ def relatorios(request):
     }
     return render(request, 'core/relatorios.html', contexto)
 
-
 @login_required(login_url='login')
 @staff_required
 def exportar_csv(request):
@@ -341,313 +750,21 @@ def exportar_csv(request):
     writer = csv.writer(response)
     writer.writerow(['Nome', 'Categoria', 'Preço Custo', 'Preço Venda', 'Estoque', 'Lucro Unitário'])
     
+    # NOVO: Impede Injeção de Código em Planilhas Excel
+    def sanitizar(texto):
+        texto_str = str(texto)
+        if texto_str.startswith(('=', '+', '-', '@')):
+            return f"'{texto_str}"
+        return texto_str
+    
     for p in Produto.objects.all():
-        writer.writerow([p.name, p.categoria, p.preco_custo, p.preco, p.quantidade_estoque, p.lucro_unitario])
+        writer.writerow([
+            sanitizar(p.name), 
+            sanitizar(p.categoria), 
+            p.preco_custo, 
+            p.preco, 
+            p.quantidade_estoque, 
+            p.lucro_unitario
+        ])
         
     return response
-
-
-
-@login_required(login_url='login')
-@require_POST
-def adicionar_ao_carrinho(request, produto_id):
-    produto = get_object_or_404(Produto, id=produto_id)
-    try:
-        quantidade = int(request.POST.get('quantidade', 1))
-    except (ValueError, TypeError):
-        quantidade = 1
-    
-    if quantidade <= 0:
-        messages.error(request, 'A quantidade deve ser maior que zero.')
-        return redirect('minha_home')
-        
-    if quantidade > produto.quantidade_estoque:
-        messages.error(request, f'Estoque insuficiente! Só existem {produto.quantidade_estoque} unidades.')
-        return redirect('minha_home')
-        
-    if 'cart' not in request.session:
-        request.session['cart'] = {}
-        
-    cart = request.session['cart']
-    str_id = str(produto_id)
-    
-    quantidade_atual = cart.get(str_id, 0)
-    nova_quantidade = quantidade_atual + quantidade
-    
-    if nova_quantidade > produto.quantidade_estoque:
-        messages.error(request, 'A quantidade total no carrinho excede o estoque disponível.')
-        return redirect('minha_home')
-        
-    cart[str_id] = nova_quantidade
-    request.session.modified = True
-    
-    messages.success(request, f'"{produto.name}" adicionado ao carrinho!')
-    return redirect('minha_home')
-
-@login_required(login_url='login')
-def atualizar_quantidade_carrinho(request, produto_id, acao):
-    produto = get_object_or_404(Produto, id=produto_id)
-    str_id = str(produto_id)
-    
-    if 'cart' in request.session and str_id in request.session['cart']:
-        cart = request.session['cart']
-        qtd_atual = cart[str_id]
-        
-        if acao == 'aumentar':
-            if qtd_atual + 1 > produto.quantidade_estoque:
-                messages.error(request, f'Estoque insuficiente! Máximo disponível: {produto.quantidade_estoque} un.')
-            else:
-                cart[str_id] += 1
-                
-        elif acao == 'diminuir':
-            if qtd_atual > 1:
-                cart[str_id] -= 1
-            else:
-                del cart[str_id]
-                messages.info(request, f'"{produto.name}" removido do carrinho.')
-                
-        request.session.modified = True
-        
-        return redirect('ver_carrinho')
-
-@login_required(login_url='login')
-def ver_carrinho(request):
-    cart = request.session.get('cart', {})
-    itens_carrinho = []
-    valor_total_carrinho = 0
-    cart_modificado = False
-    
-    for produto_id, quantidade in list(cart.items()):
-        produto = Produto.objects.filter(id=int(produto_id)).first()
-        if not produto:
-            del cart[produto_id]
-            cart_modificado = True
-            continue
-            
-        subtotal = produto.preco * quantidade
-        valor_total_carrinho += subtotal
-        
-        itens_carrinho.append({
-            'produto': produto,
-            'quantidade': quantidade,
-            'subtotal': subtotal
-        })
-        
-    if cart_modificado:
-        request.session.modified = True
-        
-    contexto = {
-        'itens': itens_carrinho,
-        'valor_total_carrinho': valor_total_carrinho
-    }
-    return render(request, 'core/carrinho.html', contexto)
-
-
-@login_required(login_url='login')
-@require_POST
-def remover_do_carrinho(request, produto_id):
-    cart = request.session.get('cart', {})
-    str_id = str(produto_id)
-    
-    if str_id in cart:
-        del cart[str_id]
-        request.session.modified = True
-        messages.success(request, 'Item removido do carrinho.')
-        
-    return redirect('ver_carrinho')
-
-
-@login_required(login_url='login')
-@require_POST
-def finalizar_venda_carrinho(request):
-    caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
-    if not caixa_aberto:
-        messages.error(request, 'Você precisa abrir o caixa antes de finalizar vendas.')
-        return redirect('gerenciar_caixa')
-
-    cart = request.session.get('cart', {})
-    
-    if not cart:
-        messages.error(request, 'Seu carrinho está vazio.')
-        return redirect('ver_carrinho')
-        
-    itens_recibo = []
-    valor_total_venda = 0
-    
-    try:
-        with transaction.atomic():
-            p_ids = [int(i) for i in cart.keys()]
-            produtos = {p.id: p for p in Produto.objects.select_for_update().filter(id__in=p_ids)}
-            
-            for pid_str, qtd in cart.items():
-                pid = int(pid_str)
-                produto = produtos.get(pid)
-                if produto is None or qtd > produto.quantidade_estoque:
-                    nome = produto.name if produto else 'um item'
-                    raise ValueError(f'Estoque insuficiente para "{nome}". Nenhuma venda foi realizada.')
-                
-                lucro_venda = produto.lucro_unitario * qtd
-                subtotal = produto.preco * qtd
-                valor_total_venda += subtotal
-                
-                HistoricoVenda.objects.create(
-                    produto=produto,
-                    nome_produto=produto.name,
-                    quantidade=qtd,
-                    preco_venda_unitario=produto.preco,
-                    lucro_obtido=lucro_venda,
-                    usuario=request.user,
-                    caixa=caixa_aberto
-                )
-                
-                itens_recibo.append({
-                    'nome': produto.name,
-                    'quantidade': qtd,
-                    'preco_unitario': float(produto.preco),
-                    'subtotal': float(subtotal)
-                })
-                
-                produto.quantidade_estoque -= qtd
-                produto.save()
-                
-    except ValueError as e:
-        messages.error(request, str(e))
-        return redirect('ver_carrinho')
-        
-    request.session['ultimo_recibo'] = {
-        'itens': itens_recibo,
-        'total': float(valor_total_venda),
-        'operador': request.user.username,
-        'data': str(timezone.now().strftime('%d/%m/%Y %H:%M'))
-    }
-    request.session['cart'] = {}
-    request.session.modified = True
-    
-    return redirect('comprovante_venda')
-
-@login_required(login_url='login')
-def comprovante_venda(request):
-    recibo = request.session.get('ultimo_recibo')
-    if not recibo:
-        messages.error(request, 'Nenhum recibo recente encontrado.')
-        return redirect('minha_home')
-        
-    return render(request, 'core/comprovante.html', {'recibo': recibo})
-
-
-@login_required(login_url='login')
-def gerenciar_caixa(request):
-    caixa_aberto = CaixaTurno.objects.filter(usuario=request.user, aberto=True).first()
-    
-    if request.method == 'POST':
-        acao = request.POST.get('acao')
-        
-        if acao == 'abrir':
-            if caixa_aberto:
-                messages.error(request, 'Você já possui um caixa aberto.')
-            else:
-                try:
-                    valor_inicial = float(request.POST.get('valor_inicial', 0))
-                    CaixaTurno.objects.create(usuario=request.user, valor_inicial=valor_inicial, aberto=True)
-                    messages.success(request, 'Caixa aberto com sucesso! Bom turno de vendas.')
-                except ValueError:
-                    messages.error(request, 'Valor inicial inválido.')
-            return redirect('gerenciar_caixa')
-            
-        elif acao == 'fechar':
-            if not caixa_aberto:
-                messages.error(request, 'Não há nenhum caixa aberto para fechar.')
-            else:
-                try:
-                    valor_informado = float(request.POST.get('valor_informado', 0))
-                    
-                    vendas_turno = HistoricoVenda.objects.filter(caixa=caixa_aberto)
-                    total_vendas = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_turno)
-                    
-                    valor_esperado = float(caixa_aberto.valor_inicial) + total_vendas
-                    
-                    valor_informado = round(valor_informado, 2)
-                    valor_esperado = round(valor_esperado, 2)
-                    
-                    if valor_informado != valor_esperado:
-                        diferenca = valor_informado - valor_esperado
-                        if diferenca > 0:
-                            messages.error(request, f'Erro: O caixa não bate! Estão a sobrar R$ {diferenca:.2f}.')
-                        else:
-                            messages.error(request, f'Erro: O caixa não bate! Estão a faltar R$ {abs(diferenca):.2f}.')
-                        
-                        return redirect('gerenciar_caixa')
-                    
-                    caixa_aberto.valor_informado = valor_informado
-                    caixa_aberto.total_vendas = total_vendas
-                    caixa_aberto.data_fechamento = timezone.now()
-                    caixa_aberto.aberto = False
-                    caixa_aberto.save()
-                    
-                    messages.success(request, 'Caixa fechado com sucesso! Os valores estão exatos.')
-                except ValueError:
-                    messages.error(request, 'Valor informado inválido.')
-            return redirect('gerenciar_caixa')
-
-    vendas_atuais = []
-    total_parcial = 0
-    total_geral_caixa = 0
-    
-    if caixa_aberto:
-        vendas_atuais = HistoricoVenda.objects.filter(caixa=caixa_aberto).order_by('-data_venda')
-        total_parcial = sum(float(v.preco_venda_unitario) * v.quantidade for v in vendas_atuais)
-        total_geral_caixa = float(caixa_aberto.valor_inicial) + total_parcial
-
-    contexto = {
-        'caixa_aberto': caixa_aberto,
-        'vendas_atuais': vendas_atuais,
-        'total_parcial': total_parcial,
-        'total_geral_caixa': total_geral_caixa,
-    }
-    return render(request, 'core/caixa.html', contexto)
-
-@login_required(login_url='login')
-def gerenciar_usuarios(request):
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso restrito a administradores.')
-        return redirect('minha_home')
-        
-    usuarios = User.objects.all().order_by('-date_joined')
-    return render(request, 'core/usuarios.html', {'usuarios': usuarios})
-
-@login_required(login_url='login')
-@require_POST
-def alternar_status_usuario(request, user_id):
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso restrito a administradores.')
-        return redirect('minha_home')
-        
-    usuario = get_object_or_404(User, id=user_id)
-    
-    if usuario == request.user:
-        messages.error(request, 'Você não pode alterar o status da sua própria conta.')
-        return redirect('gerenciar_usuarios')
-        
-    usuario.is_active = not usuario.is_active
-    usuario.save()
-    
-    status_txt = "ativado/aprovado" if usuario.is_active else "desativado/bloqueado"
-    messages.success(request, f'O usuário "{usuario.username}" foi {status_txt} com sucesso!')
-    return redirect('gerenciar_usuarios')
-
-@login_required(login_url='login')
-def historico_recibos(request):
-    sete_dias_atras = timezone.now() - timedelta(days=7)
-    
-
-    recibos = HistoricoVenda.objects.filter(
-        data_venda__gte=sete_dias_atras
-    ).order_by('-data_venda')
-    
-    total_semana = sum(float(r.preco_venda_unitario) * r.quantidade for r in recibos)
-
-    contexto = {
-        'recibos': recibos,
-        'total_semana': total_semana,
-    }
-    return render(request, 'core/recibos.html', contexto)

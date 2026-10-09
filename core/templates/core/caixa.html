@@ -87,8 +87,13 @@
         label { font-size: 14px; color: var(--text-muted); }
         input[type="number"] { padding: 12px; border-radius: 8px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); font-size: 16px; transition: 0.3s; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        /* Estilos da Venda Agrupada por Nota */
+        .venda-bloco { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+        .venda-header { background: rgba(73, 119, 223, 0.1); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        tr:last-child td { border-bottom: none; }
         th { color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
     </style>
 </head>
@@ -167,30 +172,39 @@
             </div>
 
             <h3 style="margin-top: 30px;">Vendas Realizadas Neste Turno</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Produto</th>
-                        <th>Qtd</th>
-                        <th>Subtotal / Preço Unitário</th>
-                        <th>Hora</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for v in vendas_atuais %}
-                    <tr>
-                        <td><strong>{{ v.nome_produto }}</strong></td>
-                        <td>{{ v.quantidade }} un.</td>
-                        <td style="color: var(--success); font-weight: bold;">R$ {{ v.lucro_obtido|floatformat:2 }} / R$ {{ v.preco_venda_unitario|floatformat:2 }}</td>
-                        <td style="color: var(--text-muted); font-size: 13px;">{{ v.data_venda|date:"H:i" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Nenhuma venda registrada neste turno ainda.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            
+            {% regroup vendas_atuais by venda_uuid as vendas_agrupadas %}
+            
+            {% for grupo in vendas_agrupadas %}
+                <div class="venda-bloco">
+                    <div class="venda-header">
+                        <span>🧾 Venda / Nota #{{ grupo.grouper|slice:":8" }}</span>
+                        <span>Horário: <strong>{{ grupo.list.0.data_venda|date:"H:i" }}</strong></span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Qtd</th>
+                                <th>Subtotal / Preço Unitário</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in grupo.list %}
+                            <tr>
+                                <td><strong>{{ v.nome_produto }}</strong></td>
+                                <td>{{ v.quantidade }} un.</td>
+                                <td style="color: var(--success); font-weight: bold;">R$ {{ v.lucro_obtido|floatformat:2 }} / R$ {{ v.preco_venda_unitario|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% empty %}
+                <div style="text-align: center; color: var(--text-muted); padding: 30px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--border);">
+                    Nenhuma venda registrada neste turno ainda.
+                </div>
+            {% endfor %}
         {% endif %}
     </div>
 

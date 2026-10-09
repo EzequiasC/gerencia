@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <title>Carrinho de Compras - Futuristic Stock</title>
     <style>
+        /* TEMA ESCURO (Padrão) */
         :root {
             --primary: #4977DF; --success: #22c55e; --danger: #ef4444; 
             --bg-dark: #0f172a; --bg-card: #1e293b;
             --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
         }
 
+        /* TEMA CLARO (Ativado pelo botão) */
         [data-theme="light"] {
-            --bg-dark: #f1f5f9; 
-            --bg-card: #ffffff; 
-            --text-main: #0f172a; 
-            --text-muted: #64748b; 
+            --bg-dark: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
             --border: #cbd5e1;
         }
 
@@ -24,6 +26,7 @@
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         h2 { margin: 0; color: var(--text-main); font-weight: 600; font-size: 24px; }
         
+        /* Estilo do Botão de Tema */
         .btn-theme { background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
         .btn-theme:hover { background: var(--border); }
 
@@ -45,6 +48,7 @@
 <body>
     <div class="container">
         
+        <!-- Cabeçalho com o Título e o Botão de Tema -->
         <div class="header-top">
             <h2>🛒 Carrinho de Compras</h2>
             <button id="btn-themeToggle" class="btn-theme">
@@ -94,12 +98,10 @@
                 <span style="color: var(--success);">R$ {{ valor_total_carrinho|floatformat:2 }}</span>
             </div>
 
+            <!-- BOTÃO QUE ABRE O MODAL DE PAGAMENTO/TROCO -->
             <div class="btn-container">
                 <a href="{% url 'minha_home' %}" class="btn btn-back">Continuar comprando</a>
-                <form action="{% url 'finalizar_venda_carrinho' %}" method="POST" style="flex: 1; margin: 0;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-confirm" style="width: 100%;">Finalizar Venda</button>
-                </form>
+                <button type="button" class="btn btn-confirm" style="flex: 1;" onclick="abrirModalPagamento()">Finalizar Venda</button>
             </div>
             
         {% else %}
@@ -110,14 +112,111 @@
         {% endif %}
     </div>
 
+    <!-- MODAL DE PAGAMENTO E CÁLCULO DE TROCO -->
+    <div id="modalPagamento" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 30px; width: 100%; max-width: 420px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); color: var(--text-main);">
+            <h3 style="margin-top: 0; font-size: 20px; margin-bottom: 15px;">💳 Finalizar Pagamento</h3>
+            
+            <div style="margin-bottom: 20px; font-size: 15px; background: rgba(73, 119, 223, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(73, 119, 223, 0.3); display: flex; justify-content: space-between;">
+                <span>Total a Pagar:</span>
+                <strong style="color: var(--success); font-size: 18px;">R$ {{ valor_total_carrinho|floatformat:2 }}</strong>
+            </div>
+
+            <form action="{% url 'finalizar_venda_carrinho' %}" method="POST" id="formFinalizacao">
+                {% csrf_token %}
+                
+                <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: var(--text-muted);">Forma de Pagamento:</label>
+                <select name="forma_pagamento" id="selectPagamento" required style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); font-size: 14px; margin-bottom: 20px; outline: none;" onchange="tratarFormaPagamento()">
+                    <option value="dinheiro">💵 Dinheiro</option>
+                    <option value="pix">📱 PIX</option>
+                    <option value="debito">💳 Cartão de Débito</option>
+                    <option value="credito">💳 Cartão de Crédito</option>
+                </select>
+
+                <!-- SEÇÃO DE DINHEIRO E TROCO -->
+                <div id="secaoDinheiro" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: var(--text-muted);">Valor em Dinheiro Recebido (R$):</label>
+                    <input type="number" step="0.01" id="valorRecebido" name="valor_recebido" placeholder="Ex: 50.00" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); font-size: 16px; box-sizing: border-box; outline: none;" oninput="calcularTroco()">
+                    
+                    <div id="infoTroco" style="margin-top: 10px; font-size: 15px; display: none; padding: 10px; border-radius: 6px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: var(--success);">
+                        Troco a devolver: <strong id="valorTrocoCalculado">R$ 0,00</strong>
+                    </div>
+                    <div id="avisoFaltaDinheiro" style="margin-top: 10px; font-size: 13px; display: none; color: #f87171; font-weight: bold;">
+                        ⚠️ O valor recebido é menor que o total da compra!
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 25px;">
+                    <button type="button" class="btn btn-back" style="flex: 1; padding: 12px;" onclick="fecharModalPagamento()">Cancelar</button>
+                    <button type="submit" id="btnConfirmarVenda" class="btn btn-confirm" style="flex: 1; padding: 12px;">Confirmar Venda</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE TEMA E MODAL/TROCO -->
     <script>
+        const totalCompra = parseFloat("{{ valor_total_carrinho|stringformat:'f' }}") || 0.0;
+
+        function abrirModalPagamento() {
+            document.getElementById('modalPagamento').style.display = 'flex';
+            document.getElementById('valorRecebido').focus();
+            tratarFormaPagamento();
+        }
+
+        function fecharModalPagamento() {
+            document.getElementById('modalPagamento').style.display = 'none';
+        }
+
+        function tratarFormaPagamento() {
+            const forma = document.getElementById('selectPagamento').value;
+            const secaoDinheiro = document.getElementById('secaoDinheiro');
+            const valorRecebidoInput = document.getElementById('valorRecebido');
+            
+            if (forma === 'dinheiro') {
+                secaoDinheiro.style.display = 'block';
+                valorRecebidoInput.required = true;
+                calcularTroco();
+            } else {
+                secaoDinheiro.style.display = 'none';
+                valorRecebidoInput.required = false;
+                document.getElementById('btnConfirmarVenda').disabled = false;
+                document.getElementById('btnConfirmarVenda').style.opacity = '1';
+                document.getElementById('btnConfirmarVenda').style.cursor = 'pointer';
+            }
+        }
+
+        function calcularTroco() {
+            const recebido = parseFloat(document.getElementById('valorRecebido').value) || 0.0;
+            const infoTroco = document.getElementById('infoTroco');
+            const avisoFalta = document.getElementById('avisoFaltaDinheiro');
+            const btnConfirmar = document.getElementById('btnConfirmarVenda');
+            const spanTroco = document.getElementById('valorTrocoCalculado');
+
+            if (recebido >= totalCompra) {
+                const troco = recebido - totalCompra;
+                spanTroco.textContent = 'R$ ' + troco.toFixed(2).replace('.', ',');
+                infoTroco.style.display = 'block';
+                avisoFalta.style.display = 'none';
+                btnConfirmar.disabled = false;
+                btnConfirmar.style.opacity = '1';
+                btnConfirmar.style.cursor = 'pointer';
+            } else {
+                infoTroco.style.display = 'none';
+                avisoFalta.style.display = 'block';
+                btnConfirmar.disabled = true;
+                btnConfirmar.style.opacity = '0.5';
+                btnConfirmar.style.cursor = 'not-allowed';
+            }
+        }
+
+        // Script de Tema Claro/Escuro
         const btnTheme = document.getElementById('btn-themeToggle');
         const themeIcon = document.getElementById('theme-icon');
         const themeText = document.getElementById('theme-text');
         const htmlElement = document.documentElement;
 
         const savedTheme = localStorage.getItem('theme') || 'dark';
-        
         htmlElement.setAttribute('data-theme', savedTheme);
         updateButtonUI(savedTheme);
 

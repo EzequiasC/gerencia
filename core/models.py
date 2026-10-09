@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.utils import timezone
+import uuid
 
 class Produto(models.Model):
     CATEGORIAS_CHOICES = (
@@ -53,6 +54,8 @@ class HistoricoVenda(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     data_venda = models.DateTimeField(auto_now_add=True)
     caixa = models.ForeignKey(CaixaTurno, on_delete=models.SET_NULL, null=True, blank=True)
+    venda_uuid = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
+    forma_pagamento = models.CharField(max_length=20, default='dinheiro')
 
     def __str__(self):
         return f"Venda de {self.quantidade}x {self.nome_produto} por {self.usuario.username if self.usuario else 'Desconhecido'}"
